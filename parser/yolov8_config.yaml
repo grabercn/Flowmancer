@@ -1,0 +1,16 @@
+# YOLOv8 Model Configuration
+# This should point to your custom-trained model for ER diagrams.
+
+model_weights_path: "path/to/your/er_diagram_yolov8_model.pt" # IMPORTANT: Update this path
+
+# Class names as per your trained model. The order must match the model's output.
+# Example: if your model's class ID 0 is 'entity_rect', ID 1 is 'attribute_rect', etc.
+class_names:
+  0: "entity_rect"
+  1: "attribute_rect"
+  2: "relationship_line"
+  3: "cardinality_label" # If your model also detects cardinality labels as separate objects
+
+# Confidence threshold for detections
+confidence_threshold: 0.35 # Adjust as needed
+iou_threshold: 0.45      # For Non-Max Suppression, adjust as needed
