@@ -19,6 +19,31 @@ GEMINI_API_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 # Default model, can be overridden by specific generator functions
 DEFAULT_MODEL_NAME = "gemini-2.0-flash" 
 
+async def is_gemini_api_available() -> bool:
+    """
+    Checks if the Gemini API is available by making a simple request to the model endpoint.
+    Returns True if the API is reachable, False otherwise.
+    """
+    if aiohttp is None:
+        logger.error("aiohttp library is not installed. Cannot check Gemini API availability.")
+        return False
+
+    api_url = f"{GEMINI_API_URL_BASE}{DEFAULT_MODEL_NAME}?key={GEMINI_API_KEY}"
+    
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(api_url, timeout=10) as response: # 10 seconds timeout
+                return response.status == 200
+        except aiohttp.ClientConnectorError:
+            logger.error("Could not connect to Gemini API. It may be down or unreachable.")
+            return False
+        except asyncio.TimeoutError:
+            logger.error("Gemini API check timed out after 10 seconds.")
+            return False
+        except Exception as e:
+            logger.error(f"An unexpected error occurred while checking Gemini API availability: {e}", exc_info=True)
+            return False
+
 async def call_gemini_api(
     prompt: str, 
     model_name: str = DEFAULT_MODEL_NAME,

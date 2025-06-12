@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, HTTPException, Body, UploadFile, File, Form, Request # APIRouter is key here, Request for app.state
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from generators.generator_utils import call_gemini_api
 from pydantic import BaseModel, Field
 
 # Import the generator function
@@ -153,6 +154,71 @@ async def generate_from_json_schema_route(
     logger.info(f"API Route: Returning download URL: {download_url}")
     return JSONResponse(content={"download_url": download_url, "message": f"{target_stack.capitalize()} project generated."})
 
+@router.post("/generate-ai-schema", summary="Generate a schema from a text prompt using Gemini")
+async def generate_ai_schema_route(
+    request: Request,
+    payload: Dict[str, Any] # Expecting a simple payload like {"prompt": "..."}
+):
+    prompt_text = payload.get("prompt")
+    if not prompt_text:
+        raise HTTPException(status_code=400, detail="A 'prompt' field is required.")
+
+    logger.info(f"API Route: Received /generate-ai-schema request.")
+    
+    # load the prompt template from a file:
+    prompt_template_path = request.app.state.PROMPT_TEMPLATE_PATH # This should be set in engine.py
+    if not prompt_template_path.is_file():
+        logger.error(f"Prompt template file not found at: {prompt_template_path}")
+        raise HTTPException(status_code=500, detail="Prompt template file not found. Please check server configuration.")
+    
+    with open(prompt_template_path, 'r', encoding='utf-8') as f:
+        example_json_text = f.read().strip()
+    if not example_json_text:
+        logger.error("Prompt template file is empty.")
+        raise HTTPException(status_code=500, detail="Prompt template file is empty. Please check server configuration.")
+    logger.debug(f"API Route: Using prompt template: {prompt_text[:100]}...") # Log first 100 chars for brevity
+    # Note: The prompt_text should be a complete prompt that includes instructions
+    
+    # Construct a specialized prompt to ask Gemini to return a JSON schema
+    # that matches the structure our frontend uses (Entity, Attribute interfaces in types.ts).
+    schema_generation_prompt = (prompt_text + "---- End of prompt ---- \n\n\n ---- Beggining of example file layout ---- \n\n" + example_json_text) # here we combine the prompt template with the user input
+
+    try:
+        # Call the Gemini API using the utility function
+        generated_text = await call_gemini_api(schema_generation_prompt, temperature=0.1)
+
+        if generated_text.startswith("Error:"):
+            raise Exception(generated_text) # Propagate API errors
+
+        # The response should be a JSON string, so we parse it to validate
+        # and send it back as a proper JSON object.
+        # we need to filter out any leading ```json or similar code block markers
+        # and trailing whitespace
+        
+        generated_text = generated_text.strip()
+        if generated_text.startswith("```json"):
+            generated_text = generated_text[7:].strip()
+        elif generated_text.startswith("```"):
+            generated_text = generated_text[3:].strip()
+        if generated_text.endswith("```"):
+            generated_text = generated_text[:-3].strip()
+        logger.debug(f"API Route: Generated schema text: {generated_text[:500]}...") # Log first 500 chars for brevity
+        
+        # Now we parse the generated text as JSON
+        generated_schema = json.loads(generated_text)
+        return JSONResponse(content=generated_schema)
+
+    except json.JSONDecodeError:
+        logger.error(f"Failed to parse JSON response from LLM for AI schema generation. Raw text: {generated_text[:500]}...") # type: ignore
+        raise HTTPException(status_code=500, detail="AI service returned an invalid format. Please try again.")
+    except Exception as e:
+        logger.error(f"API Route: Error during /generate-ai-schema: {e}", exc_info=True)
+        error_detail = str(e)
+        if "LLM" in error_detail or "API" in error_detail or "Gemini" in error_detail:
+            raise HTTPException(status_code=502, detail=f"LLM or API Error: {error_detail}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate AI schema: {error_detail}")
+    
+    
 
 @router.get("/health", summary="Health check")
 async def health_check_route():

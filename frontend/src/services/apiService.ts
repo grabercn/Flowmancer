@@ -3,7 +3,7 @@
 import type { Entity, Relationship, ApiSchema } from '../types';
 
 // The API prefix defined in your FastAPI backend (engine.py)
-const API_BASE_URL = '/api'; 
+const API_BASE_URL = 'http://127.0.0.1:8000/api'; 
 
 /**
  * Transforms the frontend Entity state into the format required by the backend API.
@@ -62,6 +62,41 @@ function deriveRelationshipsFromFks(entities: Entity[]): Relationship[] {
         });
     });
     return relationships;
+}
+
+/**
+ * Sends a design prompt to the Gemini API to generate a design.
+ * @param prompt - The design prompt to send to the Gemini API.
+ * @returns An object containing the generated design entities.
+ * @throws An error with a user-friendly message if the API call fails.
+ */
+export async function askGeminiForDesign(prompt: string): Promise<{
+  entities: Entity[] 
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/generate-ai-schema`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Server responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("API call failed:", error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'An unknown network error occurred.');
+    }
+    // Fallback for non-Error objects being thrown.
+    throw new Error('An unexpected error occurred during the API call.');
+  }
 }
 
 /**

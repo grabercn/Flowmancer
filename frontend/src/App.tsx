@@ -1,10 +1,10 @@
 // frontend/src/App.tsx
 
-import React, { useState, useRef, useCallback } from 'react';
-import type { ChangeEvent } from 'react';
+import React, { useState, useRef, useCallback, type ChangeEvent } from 'react';
 
-// Ant Design Components and Global Message API
-import { message, App as AntApp } from 'antd';
+// CORRECTED: Import only the 'App' component from Ant Design.
+// The 'message' object will be accessed via a hook.
+import { App as AntApp } from 'antd';
 
 // Custom Components
 import { Toolbar } from './components/Toolbar';
@@ -16,32 +16,36 @@ import { AttributeEditorModal } from './components/AttributeEditorModal';
 import { useEntityDrag } from './hooks/useEntityDrag';
 
 // API Service and Types
-import { generateBackendCode } from './services/apiService';
+import { askGeminiForDesign, generateBackendCode } from './services/apiService';
 import type { Entity, Attribute, DesignData } from './types';
+import { PlusCircleOutlined } from '@ant-design/icons';
 
 function SchemaDesigner() {
+  // --- STATE MANAGEMENT ---
   const [entities, setEntities] = useState<Entity[]>([]);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [entityCounter, setEntityCounter] = useState<number>(0);
 
-  // State for the Attribute Editor Modal
   const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
   const [editingAttribute, setEditingAttribute] = useState<Attribute | null>(null);
 
-  // State for API and UI status
   const [targetStack, setTargetStack] = useState<string>('fastapi');
   const [, setIsLoading] = useState<boolean>(false);
-  
-  // Custom hook for managing drag-and-drop state and logic
+
+  // CORRECTED: Get the contextual message API instance from the useApp hook.
+  // We alias it to 'messageApi' to avoid confusion.
+  const { message: messageApi } = AntApp.useApp();
+
   const { handleDragStart, handleDragMove, handleDragEnd, isDragging } = useEntityDrag(setEntities);
-  
+
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
-  // --- Derived State ---
-  // Memoize selectedEntity for performance if needed, but this is fine for now
+  // --- DERIVED STATE ---
   const selectedEntity = entities.find(e => e.id === selectedEntityId) || null;
 
-  // --- Entity Handlers ---
+  // --- HANDLER FUNCTIONS ---
+
+  // Entity Handlers
   const handleAddEntity = () => {
     const nextCounter = entityCounter + 1;
     const newEntity: Entity = {
@@ -59,37 +63,41 @@ function SchemaDesigner() {
   };
 
   const handleSelectEntity = (entityId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Important to prevent canvas deselect
+    e.stopPropagation();
     setSelectedEntityId(entityId);
   };
 
   const handleUpdateEntityName = useCallback((entityId: string, newName: string) => {
     const trimmedName = newName.trim();
-    if (!trimmedName) {
-      message.error("Entity name cannot be empty.");
+    if (trimmedName.length > 50) {
+      messageApi.error("Entity name cannot exceed 50 characters.");
+      return;
+    }
+    if (!trimmedName && trimmedName.length === -1) {
+      messageApi.error("Entity name cannot be empty.");
       return;
     }
     const oldName = entities.find(e => e.id === entityId)?.name;
     if (entities.some(e => e.name.toLowerCase() === trimmedName.toLowerCase() && e.id !== entityId)) {
-      message.error(`Entity name "${trimmedName}" already exists.`);
+      messageApi.error(`Entity name "${trimmedName}" already exists.`);
       return;
     }
 
-    setEntities(prev => prev.map(e => 
+    setEntities(prev => prev.map(e =>
       e.id === entityId ? { ...e, name: trimmedName } : e
     ));
 
     if (oldName) {
       setEntities(prev => prev.map(e => ({
         ...e,
-        attributes: e.attributes.map(attr => 
-          attr.isForeignKey && attr.foreignKeyRelation?.referencesEntity === oldName 
-          ? { ...attr, foreignKeyRelation: { ...attr.foreignKeyRelation, referencesEntity: trimmedName } } 
-          : attr
+        attributes: e.attributes.map(attr =>
+          attr.isForeignKey && attr.foreignKeyRelation?.referencesEntity === oldName
+            ? { ...attr, foreignKeyRelation: { ...attr.foreignKeyRelation, referencesEntity: trimmedName } }
+            : attr
         )
       })));
     }
-  }, [entities]);
+  }, [entities, messageApi]);
 
   const handleDeleteEntity = useCallback((entityId: string) => {
     const entityToDelete = entities.find(e => e.id === entityId);
@@ -105,14 +113,15 @@ function SchemaDesigner() {
     if (selectedEntityId === entityId) {
       setSelectedEntityId(null);
     }
-    message.success(`Entity "${entityToDelete.name}" deleted.`);
-  }, [entities, selectedEntityId]);
+    messageApi.success(`Entity "${entityToDelete.name}" deleted.`);
+  }, [entities, selectedEntityId, messageApi]);
 
-  // --- Attribute Handlers ---
+  // Attribute Modal and CRUD Handlers
   const handleOpenAttributeModal = (entityId: string, attributeId?: string) => {
     setSelectedEntityId(entityId);
     const entity = entities.find(e => e.id === entityId);
     if (!entity) return;
+
     const attribute = attributeId ? entity.attributes.find(a => a.id === attributeId) : null;
     setEditingAttribute(attribute || null);
     setIsAttributeModalOpen(true);
@@ -139,43 +148,60 @@ function SchemaDesigner() {
       }
       return entity;
     }));
-    message.success(`Attribute "${attributeData.name}" saved.`);
+    messageApi.success(`Attribute "${attributeData.name}" saved.`);
     handleCloseAttributeModal();
   };
 
   const handleDeleteAttribute = useCallback((entityId: string, attributeId: string) => {
-     setEntities(prev => prev.map(entity => {
-        if (entity.id === entityId) {
-            return { ...entity, attributes: entity.attributes.filter(attr => attr.id !== attributeId) };
-        }
-        return entity;
+    setEntities(prev => prev.map(entity => {
+      if (entity.id === entityId) {
+        return { ...entity, attributes: entity.attributes.filter(attr => attr.id !== attributeId) };
+      }
+      return entity;
     }));
   }, []);
 
-  // --- Toolbar Action Handlers ---
+  // Toolbar Action Handlers
   const handleGenerateCode = async () => {
     if (entities.length === 0) {
-      message.warning('Cannot generate code. Please add at least one entity.');
+      messageApi.warning('Cannot generate code. Please add at least one entity.');
       return;
     }
     setIsLoading(true);
     const key = 'generate';
-    message.loading({ content: 'Generating backend code...', key });
+    messageApi.loading({ content: 'Generating backend code...', key });
     try {
       const result = await generateBackendCode(entities, targetStack);
-      message.success({ content: 'Code generated successfully! Starting download...', key, duration: 2 });
-      window.location.href = result.download_url; // Trigger download
+      messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 2 });
+
+      // --- CORRECTED DOWNLOAD LOGIC ---
+      // This pattern prevents the page from reloading.
+
+      // 1. Create a temporary anchor element in memory.
+      const link = document.createElement('a');
+      link.href = result.download_url;
+
+      // 2. The 'download' attribute tells the browser to download the file instead of navigating to it.
+      // We can suggest a filename here, but browsers will often use the one from the server's response headers.
+      // An empty string is sufficient to trigger the download behavior.
+      link.setAttribute('download', '');
+
+      // 3. Append the link to the document, programmatically click it, and then remove it.
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        message.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      messageApi.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleSaveDesign = () => {
     if (entities.length === 0) {
-      message.info('Nothing to save.');
+      messageApi.info('Nothing to save.');
       return;
     }
     const designData: DesignData = { entities, entityCounter };
@@ -189,11 +215,12 @@ function SchemaDesigner() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    message.success('Design saved!');
+    messageApi.success('Design saved!');
   };
 
   const handleLoadDesign = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+
     if (!file) return;
 
     const reader = new FileReader();
@@ -206,19 +233,56 @@ function SchemaDesigner() {
           setEntities(designData.entities);
           setEntityCounter(designData.entityCounter || designData.entities.length);
           setSelectedEntityId(null);
-          message.success('Design loaded successfully!');
+          messageApi.success('Design loaded successfully!');
         } else {
           throw new Error("Invalid schema file format.");
         }
       } catch (err) {
-        message.error(err instanceof Error ? err.message : "Failed to parse file.");
+        messageApi.error(err instanceof Error ? err.message : "Failed to parse file.");
       } finally {
-        // Reset file input to allow loading the same file again
-        if(event.target) event.target.value = '';
+        if (event.target) event.target.value = '';
       }
     };
     reader.readAsText(file);
   };
+
+  const sendDesignPrompt = async (designPrompt: string) => {
+    // Call the AI design generation function
+    // Assuming askGeminiForDesign returns a promise that resolves to the JSON object
+    askGeminiForDesign(designPrompt)
+      .then(response => {
+        const incomingEntities = response.entities;
+
+        if (!incomingEntities || !Array.isArray(incomingEntities)) {
+          throw new Error("Invalid or missing 'entities' array in AI response.");
+        }
+
+        // Hydrate entities with default UI positions
+        const hydratedEntities = incomingEntities.map((entity, index) => {
+          return {
+            ...entity,
+            id: entity.id || `entity-${Date.now()}-${index}`, // Ensure unique ID
+            ui: {
+              x: entity.ui?.x || 50 + ((index % 8) * 60),
+              y: entity.ui?.y || 50 + (Math.floor(index / 8) * 60),
+            },
+          };
+        });
+
+        console.log("Hydrated Entities:", hydratedEntities);
+
+        // Clear existing entities and set the new, hydrated design
+        setEntities(hydratedEntities);
+        setEntityCounter(hydratedEntities.length);
+        setSelectedEntityId(null); // Deselect any currently selected entity
+
+        messageApi.success("AI design generated successfully!");
+      })
+      .catch(error => {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        messageApi.error(`AI design generation failed: ${errorMessage}`);
+      });
+  }
 
 
   return (
@@ -230,19 +294,19 @@ function SchemaDesigner() {
         onSaveDesign={handleSaveDesign}
         onLoadDesign={handleLoadDesign}
         onGenerate={handleGenerateCode}
+        onGenerateAIDesign={sendDesignPrompt}
       />
 
-      <main 
+      <main
         className="main-content"
         onMouseMove={handleDragMove}
         onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd} // Also stop dragging if mouse leaves the main area
+        onMouseLeave={handleDragEnd}
       >
         <div ref={canvasWrapperRef} className="canvas-area">
           <div className="canvas-area-inner" style={{ cursor: isDragging ? 'grabbing' : 'default' }}>
-            {/* Render Entities */}
             {entities.map(entity => (
-              <EntityCard 
+              <EntityCard
                 key={entity.id}
                 entity={entity}
                 isSelected={entity.id === selectedEntityId}
@@ -251,43 +315,44 @@ function SchemaDesigner() {
               />
             ))}
             {entities.length === 0 && (
-               <div className="canvas-placeholder-container">
-                  <p className="canvas-placeholder">Click "Add Entity" to begin</p>
-               </div>
+              <div className="canvas-placeholder-container">
+                <PlusCircleOutlined className="canvas-placeholder" />
+                <p className="canvas-placeholder">Click "Add Entity" to begin</p>
+              </div>
             )}
           </div>
         </div>
 
-        <PropertiesPanel 
-            selectedEntity={selectedEntity}
-            onUpdateEntityName={handleUpdateEntityName}
-            onDeleteEntity={handleDeleteEntity}
-            onAddAttribute={handleOpenAttributeModal}
-            onEditAttribute={handleOpenAttributeModal}
-            onDeleteAttribute={handleDeleteAttribute}
+        <PropertiesPanel
+          selectedEntity={selectedEntity}
+          onUpdateEntityName={handleUpdateEntityName}
+          onDeleteEntity={handleDeleteEntity}
+          onAddAttribute={handleOpenAttributeModal}
+          onEditAttribute={handleOpenAttributeModal}
+          onDeleteAttribute={handleDeleteAttribute}
         />
       </main>
 
       {isAttributeModalOpen && selectedEntity && (
-          <AttributeEditorModal
-            isOpen={isAttributeModalOpen}
-            onClose={handleCloseAttributeModal}
-            onSave={handleSaveAttribute}
-            attributeToEdit={editingAttribute}
-            entityAttributes={selectedEntity.attributes}
-            allEntities={entities}
-            currentEntityName={selectedEntity.name}
-          />
+        <AttributeEditorModal
+          isOpen={isAttributeModalOpen}
+          onClose={handleCloseAttributeModal}
+          onSave={handleSaveAttribute}
+          attributeToEdit={editingAttribute}
+          entityAttributes={selectedEntity.attributes}
+          allEntities={entities}
+          currentEntityName={selectedEntity.name}
+        />
       )}
     </div>
   );
 }
 
-// Wrap the main export in AntApp to enable message/notification APIs
+// Wrap the main export in AntApp to enable the message API
 export default function AppWrapper() {
-    return (
-        <AntApp>
-            <SchemaDesigner />
-        </AntApp>
-    )
+  return (
+    <AntApp>
+      <SchemaDesigner />
+    </AntApp>
+  )
 }

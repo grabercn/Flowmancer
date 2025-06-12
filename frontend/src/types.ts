@@ -8,6 +8,7 @@ export interface Attribute {
   id: string; // A unique client-side ID for React keys and state management.
   name: string;
   type: string;
+  description?: string; // Optional description for the attribute.
   isPrimaryKey: boolean;
   isNotNull: boolean;
   isUnique: boolean;
@@ -25,6 +26,7 @@ export interface Attribute {
 export interface Entity {
   id: string; // A unique client-side ID.
   name: string;
+  description?: string; // Optional description for the entity.
   attributes: Attribute[];
   ui: {
     x: number; // UI position x-coordinate.

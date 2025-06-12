@@ -70,6 +70,15 @@ export function PropertiesPanel({
               onChange={handleNameChange}
               placeholder="Enter entity name"
             />
+            {/* Description Section */}
+            <label htmlFor="entity-description-input" className="property-label">Description</label>
+            <Input.TextArea
+              id="entity-description-input"
+              value={selectedEntity.description || ''}
+              onChange={(e) => onUpdateEntityName(selectedEntity.id, e.target.value)}
+              placeholder="Enter entity description"
+              rows={3}
+            />
         </div>
 
         {/* Attributes Section */}
@@ -127,7 +136,7 @@ export function PropertiesPanel({
         <div className="property-section danger-zone">
             <Popconfirm
                 title="Delete Entity"
-                description={`Are you sure you want to delete the "${selectedEntity.name}" entity? This cannot be undone.`}
+                description={`Delete "${selectedEntity.name}"? This cannot be undone.`}
                 onConfirm={() => onDeleteEntity(selectedEntity.id)}
                 okText="Yes, Delete"
                 cancelText="Cancel"

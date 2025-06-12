@@ -24,6 +24,8 @@ FRONTEND_BUILD_DIR = BASE_DIR / "frontend" / "dist"
 FRONTEND_ASSETS_DIR = FRONTEND_BUILD_DIR / "assets"
 
 DOWNLOADS_ROOT_DIR = BASE_DIR / "downloads"
+PROMPT_TEMPLATE_PATH = BASE_DIR / "templates" / "json" / "example_json_schema.json"
+
 TEMP_BASE_DIR = Path(tempfile.gettempdir()) / "er2backend_runs_v3"
 
 # --- Logging Setup ---
@@ -41,6 +43,7 @@ app = FastAPI(
 app.state.TEMP_BASE_DIR = TEMP_BASE_DIR
 app.state.DOWNLOADS_ROOT_DIR = DOWNLOADS_ROOT_DIR
 app.state.FRONTEND_BUILD_DIR = FRONTEND_BUILD_DIR
+app.state.PROMPT_TEMPLATE_PATH = PROMPT_TEMPLATE_PATH
 
 
 # --- Middleware ---

@@ -1,0 +1,108 @@
+You are helping populate a JSON schema that defines entities in a visual data modeler. Each entity has an ID, a name, and optional attributes. Attributes should represent fields or properties of the entity. Each attribute must have a name, type, and optionally a default value or description. The UI coordinates are used for rendering on a canvas and should be preserved.
+
+Here is the partially completed JSON:
+
+{
+  "entities": [
+    {
+      "id": "entity-1749753159632",
+      "name": "NewEntity1",
+      "attributes": [],
+      "description": "This is a placeholder entity for demonstration purposes. It is an optional description.",
+      "ui": {
+        "x": 476,
+        "y": 152
+      }
+    }
+  ],
+  "entityCounter": 1
+}
+
+🔧 Fill in the `attributes` array with 3–5 realistic attribute definitions. Use this format for each attribute:
+
+{
+  "name": "attribute_name",
+  "type": "string | number | boolean | date | object | array",
+  "default": "optional default value",
+  "description": "optional short description"
+    "isPrimaryKey": true | false, determine if this attribute is the primary key,
+    "isNotNull": true | false,
+    "isUnique": true | false,
+    "isForeignKey": true | false
+    "foreignKeyRelation": { // this is optional, only if isForeignKey is true (then it must be present and linked to a valid entity)
+            "referencesEntity": "User",
+            "referencesField": "user_id"
+          }
+}
+
+💡 Base your attributes on the entity name or create a plausible default if the name is generic like 'NewEntity1'.
+Also please ensure that the `isPrimaryKey`, `isNotNull`, `isUnique`, and `isForeignKey` fields are set appropriately based on common database design practices.
+We want to ensure that the attributes are meaningful and relevant to the entity's purpose, while also maintaining a realistic structure for a database schema.
+
+Remmeber that each schema must have a unique ID for each attribute, and the UI coordinates should remain unchanged.
+
+
+🎯 Example output:
+{
+  "entities": [
+    {
+      "id": "entity-1749753159632",
+      "name": "NewEntity1",
+      "description": "This is a placeholder entity for demonstration purposes.",
+      "attributes": [
+        {
+          "id": "attr-1749753159632-0",
+          "name": "entity_id",
+          "type": "number",
+          "default": null,
+          "description": "Unique identifier for the entity",
+          "isPrimaryKey": true,
+          "isNotNull": true,
+          "isUnique": true,
+          "isForeignKey": false
+        },
+        {
+          "id": "attr-1749753159632-1",
+          "name": "entity_name",
+          "type": "string",
+          "default": "",
+          "description": "Name of the entity",
+          "isPrimaryKey": false,
+          "isNotNull": true,
+          "isUnique": false,
+          "isForeignKey": false
+        },
+        {
+          "id": "attr-1749753159632-2",
+          "name": "created_at",
+          "type": "date",
+          "default": null,
+          "description": "Timestamp when the entity was created",
+          "isPrimaryKey": false,
+          "isNotNull": true,
+          "isUnique": false,
+          "isForeignKey": false
+        },
+        {
+          "id": "attr-1749753159632-3",
+          "name": "status",
+          "type": "string",
+          "default": "active",
+          "description": "Current status of the entity",
+          "isPrimaryKey": false,
+          "isNotNull": false,
+          "isUnique": false,
+          "isForeignKey": false
+        }
+      ],
+      "ui": {
+        "x": 476,
+        "y": 152
+      }
+    }
+  ],
+  [you can add more entities here if it better satisfies user requirements, and increment the entityCounter accordingly]
+  "entityCounter": 1
+}
+
+🧠 Only fill in the `attributes` array. Do not modify the ID or UI. You may rename the entity if appropriate.
