@@ -7,7 +7,6 @@ import {
     CodeOutlined,
     MenuOutlined,
     GoldOutlined,
-    SettingOutlined,
 } from '@ant-design/icons';
 import { SettingsPopup } from './SettingsForm';
 import { useUniversal } from '../context/UniversalProvider';

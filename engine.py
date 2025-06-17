@@ -99,7 +99,14 @@ app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="static-as
 # This is where the backend will store generated files (e.g., ZIPs).
 # This serves the generated ZIP files from the /downloads directory.
 # It must come BEFORE the catch-all route.
-app.mount("/downloads", StaticFiles(directory=DOWNLOADS_ROOT_DIR), name="downloads")
+
+@app.get("/downloads/{file_path:path}")
+async def serve_file(file_path: str):
+    logger.info(file_path)
+    full_path = Path(DOWNLOADS_ROOT_DIR) / file_path
+    if not full_path.exists() or not full_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(full_path)
 
 # --- Catch-All Route to Serve the React App ---
 # This is the key to serving a Single-Page Application (SPA).

@@ -18,6 +18,7 @@ import { askGeminiForDesign, generateBackendCode } from './services/apiService';
 import type { Entity, Attribute, DesignData } from './types';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import WelcomeScreen from './components/WelcomeScreen';
+import confetti from 'canvas-confetti';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
@@ -174,6 +175,7 @@ function SchemaDesigner() {
     messageApi.loading({ content: 'Generating code... This may take several minutes!', key, duration: 0 });
     try {
       const result = await generateBackendCode(entities, targetStack, geminiApiKey, geminiModel);
+      fireConfetti();
       messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 2 });
       window.location.href = result.download_url; // Trigger download
     } catch (error) {
@@ -270,7 +272,8 @@ function SchemaDesigner() {
         setEntities(hydratedEntities);
         setEntityCounter(hydratedEntities.length);
         setSelectedEntityId(null); // Deselect any currently selected entity
-
+        
+        fireConfetti();
         messageApi.success({content: "AI design generated successfully!", key: 'ai-design'});
       })
       .catch(error => {
@@ -281,7 +284,25 @@ function SchemaDesigner() {
         UniversalProvider.setIsLoading(false);
       });
   }
+  
+  // --- EFFECTS ---
 
+   // misc Confetti handler to fire confetti
+  const fireConfetti = (particleCount?: number, spread?: number, origin?: any) => {
+      const confettiInstance = confetti({
+          particleCount: particleCount || 100,
+          spread: spread || 70,
+          origin: origin || { y: 0.6 },
+  })
+    // bump z Index
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      canvas.style.zIndex = '9999';
+      canvas.style.position = 'fixed'; // Ensure it sits on top
+      canvas.style.pointerEvents = 'none'; // Prevent mouse issues
+    }
+    return confettiInstance;
+  };
 
   return (
     <div className="app-container">

@@ -24,7 +24,7 @@ def load_springboot_example_files() -> Dict[str, str]:
         return examples
     
     # Load .java, .xml, .properties, .md example files
-    for ext_pattern in ["example_*.java", "example_*.xml", "example_*.properties", "example_*.md"]:
+    for ext_pattern in ["example_*.java", "example_*.xml", "example_*.properties", "example_*.md", "Example*.java"]:
         for file_path in TEMPLATE_DIR.glob(ext_pattern):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
@@ -33,6 +33,7 @@ def load_springboot_example_files() -> Dict[str, str]:
                     # For the key in examples dict, we can use the template name for clarity.
                     key_name = file_path.name # e.g., ExampleApplication.java
                     examples[key_name] = f.read()
+                    logger.info(f"Loaded example file {file_path.name}")
             except Exception as e:
                 logger.error(f"Error loading Spring Boot template file {file_path.name}: {e}")
     
