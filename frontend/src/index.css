@@ -4,8 +4,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   margin: 0;
-  background-color: #f0f2f5;
-  color: #333;
+  background-color: var(--body-bg-color);
+  color: var(--body-text-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -25,8 +25,8 @@ body {
   align-items: center;
   padding: 0 24px;
   height: 64px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #f0f0f0;
+  background-color: var(--app-toolbar-bg);
+  border-bottom: 1px solid var(--app-toolbar-border);
   flex-shrink: 0;
   z-index: 100;
 }
@@ -58,10 +58,10 @@ body {
   flex-grow: 1;
   position: relative;
   overflow: auto; /* Allows scrolling within the canvas */
-  background-color: #fafafa;
+  background-color: var(--canvas-area-bg);
   background-image:
-    linear-gradient(#e0e0e0 1px, transparent 1px),
-    linear-gradient(to right, #e0e0e0 1px, transparent 1px);
+    linear-gradient(var(--canvas-grid-line) 1px, transparent 1px),
+    linear-gradient(to right, var(--canvas-grid-line) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -82,7 +82,7 @@ body {
 }
 
 .canvas-placeholder {
-  color: #8c8c8c;
+  color: var(--attribute-placeholder-color);
   font-size: 1.1rem;
 }
 
@@ -90,7 +90,7 @@ body {
 .entity-card-wrapper {
   position: absolute;
   width: 240px;
-  border: 2px solid transparent;
+  border: 2px solid var(--entity-card-border);
   border-radius: 8px; /* Ant Design's default card radius */
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   z-index: 10;
@@ -108,44 +108,73 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 6px 4px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--attribute-item-border);
   font-size: 13px;
 }
 
 .attribute-item:last-child { border-bottom: none; }
 .attribute-info { display: flex; align-items: center; }
 .attribute-name.pk { font-weight: 600; }
-.attribute-type { margin-left: auto; color: #8c8c8c; font-family: 'Courier New', Courier, monospace; }
-.attribute-placeholder { padding: 16px; text-align: center; color: #8c8c8c; font-style: italic; font-size: 13px; }
+.attribute-type { margin-left: auto; color: var(--attribute-placeholder-color); font-family: 'Courier New', Courier, monospace; }
+.attribute-placeholder { padding: 16px; text-align: center; color: var(--attribute-placeholder-color); font-style: italic; font-size: 13px; }
 
 /* --- Properties Panel Styles --- */
 .properties-panel {
   width: 320px;
   min-width: 280px;
-  background-color: #ffffff;
-  border-left: 1px solid #f0f0f0;
+  background-color: var(--properties-panel-bg);
+  border-left: 1px solid var(--properties-panel-border);
   display: flex; /* MODIFIED: Changed from 'none' to 'flex' to make it always visible on larger screens */
   flex-direction: column;
   flex-shrink: 0;
 }
 
-.properties-panel-header { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+.properties-panel-header { padding: 16px; border-bottom: 1px solid var(--properties-panel-border); }
 .properties-title { margin: 0; font-size: 16px; font-weight: 600; }
 .properties-panel-content { padding: 16px; overflow-y: auto; flex-grow: 1; }
 .properties-placeholder-container { display: flex; align-items: center; justify-content: center; height: 100%; }
 .property-section { margin-bottom: 24px; }
-.property-label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: #595959; }
+.property-label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: var(--property-label-color); }
 .attribute-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .attribute-list-item-content { display: flex; align-items: center; gap: 8px; width: 100%; }
 .attribute-icons { display: flex; gap: 6px; min-width: 32px; }
-.danger-zone { margin-top: auto; padding-top: 16px; border-top: 1px solid #f0f0f0; }
+.danger-zone { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--danger-zone-border); }
+
+/* --- Styles for Responsive Properties Panel --- */
+
+/* By default, the desktop panel is hidden. */
+.properties-panel.desktop-panel {
+  display: none; 
+}
+
+/* By default, the mobile floating button is visible. */
+.mobile-properties-trigger {
+    display: block; 
+    position: absolute; /* This can be adjusted if it conflicts with antd's FloatButton default */
+    bottom: 24px;
+    left: 24px;
+    z-index: 50; /* Ensure it's above canvas but below modals */
+}
+
+/* Media query for larger screens (tablets and desktops) */
+@media (min-width: 1024px) {
+  /* Show the desktop panel */
+  .properties-panel.desktop-panel {
+    display: flex; 
+  }
+  
+  /* Hide the mobile floating button */
+  .mobile-properties-trigger {
+    display: none; 
+  }
+}
 
 /* --- Attribute Modal FK Section --- */
 .fk-details-section {
     padding: 16px;
     margin-top: 8px;
-    background-color: #fafafa;
-    border: 1px solid #f0f0f0;
+    background-color: var(--canvas-area-bg);
+    border: 1px solid var(--app-toolbar-border);
     border-radius: 8px;
 }
 
@@ -158,7 +187,6 @@ body {
 .ant-message {
   z-index: 9999 !important;
 }
-
 
 /* --- Responsive Layout --- */
 /* On smaller screens, hide the properties panel and center toolbar items */

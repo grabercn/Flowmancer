@@ -549,7 +549,7 @@ async def generate_springboot_project(schema_data: Dict[str, Any], output_base_d
         return True
 
     # Generate pom.xml
-    pom_prompt = construct_pom_xml_prompt(schema_data, example_files['example_pom.xml'], group_id, artifact_id, app_name_display, app_description)
+    pom_prompt = construct_pom_xml_prompt(schema_data, example_files['example_pom.xml'], group_id, artifact_id, app_name_display, "Generated Spring Boot Application")
     await generate_and_store_single_file("pom.xml", pom_prompt, "pom.xml")
 
     # Generate application.properties

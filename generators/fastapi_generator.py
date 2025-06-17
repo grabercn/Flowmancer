@@ -274,7 +274,7 @@ async def generate_fastapi_project(
         llm_response = await call_gemini_api(
             prompt, 
             temperature=0.3, 
-            max_output_tokens=8192
+            max_output_tokens=8192,
         ) 
         
         if llm_response.startswith("Error:"):
@@ -343,7 +343,8 @@ async def generate_fastapi_project(
     if main_app_content.startswith("# LLM Generation Error") or main_app_content.startswith("# Failed to extract"):
         raise Exception(f"Failed to generate main.py: {main_app_content}")
     generated_files_content['main.py'] = main_app_content
-
+    
+    # generate the requirements.txt and README.md files
     generated_files_content['requirements.txt'] = example_files['requirements.txt']
     generated_files_content['README.md'] = example_files['readme.md']
 

@@ -70,15 +70,22 @@ export function PropertiesPanel({
               onChange={handleNameChange}
               placeholder="Enter entity name"
             />
-            {/* Description Section */}
-            <label htmlFor="entity-description-input" className="property-label">Description</label>
-            <Input.TextArea
-              id="entity-description-input"
-              value={selectedEntity.description || ''}
-              onChange={(e) => onUpdateEntityName(selectedEntity.id, e.target.value)}
-              placeholder="Enter entity description"
-              rows={3}
-            />
+        </div>
+
+        {/* Entity Description Section */}
+        <div className="property-section">
+          <label htmlFor="entity-description-input" className="property-label">Description</label>
+          <Input.TextArea
+            id="entity-description-input"
+            value={selectedEntity.description || ''}
+            onChange={(e) => {
+              if (selectedEntity) {
+                selectedEntity.description = e.target.value;
+              }
+            }}
+            placeholder="Enter entity description"
+            rows={3}
+          />
         </div>
 
         {/* Attributes Section */}

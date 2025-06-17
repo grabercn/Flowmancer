@@ -70,7 +70,7 @@ function deriveRelationshipsFromFks(entities: Entity[]): Relationship[] {
  * @returns An object containing the generated design entities.
  * @throws An error with a user-friendly message if the API call fails.
  */
-export async function askGeminiForDesign(prompt: string): Promise<{
+export async function askGeminiForDesign(prompt: string, geminiApiKey: string, geminiModel: string): Promise<{
   entities: Entity[] 
 }> {
   try {
@@ -79,7 +79,7 @@ export async function askGeminiForDesign(prompt: string): Promise<{
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, gemini_api_key: geminiApiKey, gemini_model: geminiModel }),
     });
 
     if (!response.ok) {
@@ -106,11 +106,13 @@ export async function askGeminiForDesign(prompt: string): Promise<{
  * @returns An object containing the download URL for the generated ZIP file.
  * @throws An error with a user-friendly message if the API call fails.
  */
-export async function generateBackendCode(entities: Entity[], targetStack: string): Promise<{ download_url: string }> {
+export async function generateBackendCode(entities: Entity[], targetStack: string, geminiApiKey: string, geminiModel: string): Promise<{ download_url: string }> {
   const apiEntities = prepareEntitiesForApi(entities);
   const relationships = deriveRelationshipsFromFks(entities);
 
-  const payload: { schema_data: ApiSchema, target_stack: string } = {
+  const payload: { schema_data: ApiSchema, target_stack: string, gemini_api_key: string, gemini_model: string } = {
+    gemini_api_key: geminiApiKey,
+    gemini_model: geminiModel,
     schema_data: {
       entities: apiEntities,
       relationships: relationships,

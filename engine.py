@@ -6,10 +6,10 @@ import tempfile
 from pathlib import Path
 import json
 
-from fastapi import FastAPI, HTTPException, Request # Request is needed for the catch-all route
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Request # type: ignore # Request is needed for the catch-all route
+from fastapi.staticfiles import StaticFiles # type: ignore
+from fastapi.responses import FileResponse, HTMLResponse # type: ignore
+from starlette.middleware.cors import CORSMiddleware # type: ignore
 
 # Import the API router
 from api import routes as api_routes # Assuming api/__init__.py exists
@@ -45,6 +45,9 @@ app.state.DOWNLOADS_ROOT_DIR = DOWNLOADS_ROOT_DIR
 app.state.FRONTEND_BUILD_DIR = FRONTEND_BUILD_DIR
 app.state.PROMPT_TEMPLATE_PATH = PROMPT_TEMPLATE_PATH
 
+# --- API Keys and Model Configuration ---
+app.state.GEMINI_API_KEY = "" # we will pass this in via the api 
+app.state.GEMINI_API_MODEL = "gemini-2.5-flash-preview-05-20" # default model, can be overridden in the API
 
 # --- Middleware ---
 app.add_middleware(
@@ -92,6 +95,12 @@ app.include_router(api_routes.router, prefix="/api")
 # A request to `http://.../assets/index-*.js` will serve `frontend/dist/assets/index-*.js`.
 app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS_DIR), name="static-assets")
 
+# --- Serve the Apps Downloads Directory ---
+# This is where the backend will store generated files (e.g., ZIPs).
+# This serves the generated ZIP files from the /downloads directory.
+# It must come BEFORE the catch-all route.
+app.mount("/downloads", StaticFiles(directory=DOWNLOADS_ROOT_DIR), name="downloads")
+
 # --- Catch-All Route to Serve the React App ---
 # This is the key to serving a Single-Page Application (SPA).
 # It catches any path that hasn't been matched by the API routes or the static file mount.
@@ -128,6 +137,6 @@ def root_health_check():
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn # type: ignore
     logger.info("Starting Uvicorn server for React SPA and API Backend (http://localhost:8000)...")
     uvicorn.run("engine:app", host="0.0.0.0", port=8000, reload=True, reload_dirs=["."])

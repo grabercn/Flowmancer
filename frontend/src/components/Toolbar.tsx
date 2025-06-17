@@ -1,9 +1,4 @@
-// frontend/src/components/Toolbar.tsx
-
-import React, { useState, useRef } from 'react';
-import type { ChangeEvent } from 'react';
-
-// Import Ant Design components and icons
+import React, { useRef, useState } from 'react';
 import { Button, Select, Drawer, Space, Typography, Popover, Input } from 'antd';
 import {
     PlusCircleOutlined,
@@ -12,99 +7,21 @@ import {
     CodeOutlined,
     MenuOutlined,
     GoldOutlined,
+    SettingOutlined,
 } from '@ant-design/icons';
+import { SettingsPopup } from './SettingsForm';
+import { useUniversal } from '../context/UniversalProvider';
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
-// --- STEP 1: Define a separate, stable component for the Popover content ---
-// This prevents the TextArea from being re-created on every keystroke.
-interface AIPromptContentProps {
-    prompt: string;
-    onPromptChange: (value: string) => void;
-    onGenerate: () => void;
-}
-
-const AIPromptContent = ({ prompt, onPromptChange, onGenerate }: AIPromptContentProps) => (
-    <div style={{ width: 280 }}>
-        <p style={{ marginBottom: '8px' }}>Describe your desired schema. e.g., "A blog with users, posts, and comments."</p>
-        <TextArea
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            rows={4}
-            style={{ width: '100%', marginBottom: '8px' }}
-            placeholder="Describe your design requirements..."
-        />
-        <Button
-            type="primary"
-            onClick={onGenerate}
-            disabled={!prompt.trim()}
-        >
-            Generate
-        </Button>
-    </div>
-);
-
-
-// --- STEP 2: Define a stable MenuActions component outside of Toolbar ---
-interface MenuActionsProps {
-    isMobile?: boolean;
-    onAddEntity: () => void;
-    onSaveDesign: () => void;
-    onLoadClick: () => void;
-    // Props for the AI Popover
-    popoverOpen: boolean;
-    onPopoverOpenChange: (visible: boolean) => void;
-    aiPromptContent: React.ReactNode;
-}
-
-const MenuActions = ({
-    isMobile = false,
-    onAddEntity,
-    onSaveDesign,
-    onLoadClick,
-    popoverOpen,
-    onPopoverOpenChange,
-    aiPromptContent,
-}: MenuActionsProps) => {
-    return (
-        <Space direction={isMobile ? 'vertical' : 'horizontal'} style={isMobile ? { width: '100%' } : {}}>
-            <Button icon={<PlusCircleOutlined />} onClick={onAddEntity}>
-                Add Entity
-            </Button>
-            <Button icon={<SaveOutlined />} onClick={onSaveDesign}>
-                Save Design
-            </Button>
-            <Button icon={<FolderOpenOutlined />} onClick={onLoadClick}>
-                Load Design
-            </Button>
-            
-            {/* Popover now wraps the button that triggers it */}
-            <Popover
-                content={aiPromptContent}
-                title="Generate Schema with AI"
-                trigger="click"
-                open={popoverOpen}
-                onOpenChange={onPopoverOpenChange}
-                placement="bottom"
-            >
-                <Button type='text' icon={<GoldOutlined />}>
-                    Generate AI Design
-                </Button>
-            </Popover>
-        </Space>
-    );
-};
-
-
-// --- STEP 3: Define the main Toolbar component ---
 interface ToolbarProps {
     targetStack: string;
     onTargetStackChange: (stack: string) => void;
     onAddEntity: () => void;
     onSaveDesign: () => void;
-    onLoadDesign: (event: ChangeEvent<HTMLInputElement>) => void;
+    onLoadDesign: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onGenerate: () => void;
     onGenerateAIDesign: (prompt: string) => void;
 }
@@ -118,76 +35,85 @@ export function Toolbar({
     onGenerate,
     onGenerateAIDesign,
 }: ToolbarProps) {
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [aiPopoverOpen, setAiPopoverOpen] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [showPromptPopover, setShowPromptPopover] = useState(false);
-    const [designPrompt, setDesignPrompt] = useState("");
-
-    const handleLoadClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleGenerateFromAi = () => {
-        onGenerateAIDesign(designPrompt);
-        setShowPromptPopover(false); // Close the popover after clicking generate
-    };
-
-    const showDrawer = () => setIsDrawerOpen(true);
-    const closeDrawer = () => setIsDrawerOpen(false);
+    const UniversalProvider = useUniversal();
     
-    // Memoize the content for the popover so it's not recreated unless dependencies change
-    const aiPromptContent = React.useMemo(() => (
-        <AIPromptContent 
-            prompt={designPrompt}
-            onPromptChange={setDesignPrompt}
-            onGenerate={handleGenerateFromAi}
-        />
-    ), [designPrompt]);
 
+    const handleLoadClick = () => fileInputRef.current?.click();
+    const handleAIGenerate = () => {
+        onGenerateAIDesign(aiPrompt);
+        setAiPopoverOpen(false);
+    };
+
+    const Actions = (
+        <Space direction="horizontal" style={{ width: '100%' }}>
+            <SettingsPopup />
+            <Button icon={<PlusCircleOutlined />} onClick={onAddEntity} disabled={UniversalProvider.isLoading}>Add Entity</Button>
+            <Button icon={<SaveOutlined />} onClick={onSaveDesign} disabled={UniversalProvider.isLoading}>Save Design</Button>
+            <Button icon={<FolderOpenOutlined />} onClick={handleLoadClick} disabled={UniversalProvider.isLoading}>Load Design</Button>
+            <Popover
+                content={
+                    <div style={{ width: 260 }}>
+                        <p>Describe your desired schema.</p>
+                        <TextArea
+                            value={aiPrompt}
+                            onChange={e => setAiPrompt(e.target.value)}
+                            rows={3}
+                            placeholder="Describe your design requirements..."
+                            style={{ marginBottom: 8 }}
+                        />
+                        <Button
+                            type="primary"
+                            onClick={handleAIGenerate}
+                            disabled={!aiPrompt.trim() || UniversalProvider.apiKey.trim() === '' || UniversalProvider.geminiModel.trim() === ''}
+                            block
+                        >
+                            Generate
+                        </Button>
+                    </div>
+                }
+                title="Generate Schema with AI"
+                trigger="click"
+                open={aiPopoverOpen}
+                onOpenChange={setAiPopoverOpen}
+                placement="bottom"
+            >
+                <Button
+                    type="text"
+                    disabled={!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() || UniversalProvider.isLoading}
+                    icon={<GoldOutlined />}
+                >{!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() ? 'Check Settings' : 'Generate AI Design'}</Button>
+            </Popover>
+        </Space>
+    );
 
     return (
         <header className="app-toolbar">
             <div className="toolbar-section-left">
-                <CodeOutlined style={{ fontSize: '24px', color: '#1677ff' }} />
+                <CodeOutlined style={{ fontSize: 24, color: '#1677ff' }} />
                 <Title level={4} style={{ margin: 0, display: 'none' }} className="desktop-only-title">
                     ER 2 Backend - Designer
                 </Title>
             </div>
-
-            {/* Desktop Navigation */}
-            <nav className="toolbar-section-center">
-                <MenuActions 
-                    onAddEntity={onAddEntity}
-                    onSaveDesign={onSaveDesign}
-                    onLoadClick={handleLoadClick}
-                    popoverOpen={showPromptPopover}
-                    onPopoverOpenChange={setShowPromptPopover}
-                    aiPromptContent={aiPromptContent}
-                />
-            </nav>
-
+            <nav className="toolbar-section-center desktop-only">{Actions}</nav>
             <div className="toolbar-section-right">
-                <Select
-                    value={targetStack}
-                    onChange={onTargetStackChange}
-                    style={{ width: 180 }}
-                >
+                <Select value={targetStack} onChange={onTargetStackChange} disabled={UniversalProvider.isLoading} style={{ width: 180 }}>
                     <Option value="fastapi">FastAPI (Python)</Option>
                     <Option value="springboot">Spring Boot (Java)</Option>
                     <Option value="dotnet" disabled>.NET (soon)</Option>
                 </Select>
-
-                <Button type="primary" onClick={onGenerate}>
-                    Generate Backend
-                </Button>
-
-                {/* Mobile Menu Trigger */}
+                <Button
+                    type="primary"
+                    disabled={!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() || UniversalProvider.isLoading }
+                    onClick={onGenerate}
+                >{!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() ? 'Check Settings' : 'Generate Backend'}</Button>
                 <div className="mobile-only-menu">
-                    <Button type="text" icon={<MenuOutlined />} onClick={showDrawer} />
+                    <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
                 </div>
             </div>
-
-            {/* Hidden file input for the "Load Design" action */}
             <input
                 type="file"
                 ref={fileInputRef}
@@ -195,27 +121,15 @@ export function Toolbar({
                 style={{ display: 'none' }}
                 accept=".json"
             />
-
-            {/* Mobile Drawer */}
             <Drawer
                 title="Actions"
                 placement="right"
-                onClose={closeDrawer}
-                open={isDrawerOpen}
-                bodyStyle={{ padding: '16px' }}
+                onClose={() => setDrawerOpen(false)}
+                open={drawerOpen}
+                bodyStyle={{ padding: 16 }}
             >
-                <MenuActions 
-                    isMobile={true}
-                    onAddEntity={onAddEntity}
-                    onSaveDesign={onSaveDesign}
-                    onLoadClick={handleLoadClick}
-                    popoverOpen={showPromptPopover}
-                    onPopoverOpenChange={setShowPromptPopover}
-                    aiPromptContent={aiPromptContent}
-                />
+                {Actions}
             </Drawer>
         </header>
     );
 }
-// Toolbar component for the ER 2 Backend Designer
-// This component provides a responsive toolbar with options to add entities, save/load designs, and generate backend code.

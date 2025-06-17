@@ -36,13 +36,7 @@ export function EntityCard({ entity, isSelected, onSelect, onDragStart }: Entity
     >
       <Card
         size="small"
-        headStyle={{ 
-            backgroundColor: '#f0f2f5', 
-            cursor: 'grab', 
-            textAlign: 'center',
-            padding: '0 12px'
-        }}
-        bodyStyle={{ padding: 0 }}
+        style={{ textAlign: 'center' }}
         title={
           <div className="entity-card-title">
             <DatabaseOutlined style={{ marginRight: 8, color: '#595959' }}/>

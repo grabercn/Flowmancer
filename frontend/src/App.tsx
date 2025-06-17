@@ -1,9 +1,6 @@
 // frontend/src/App.tsx
 
 import React, { useState, useRef, useCallback, type ChangeEvent } from 'react';
-
-// CORRECTED: Import only the 'App' component from Ant Design.
-// The 'message' object will be accessed via a hook.
 import { App as AntApp } from 'antd';
 
 // Custom Components
@@ -11,6 +8,7 @@ import { Toolbar } from './components/Toolbar';
 import { EntityCard } from './components/EntityCard';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { AttributeEditorModal } from './components/AttributeEditorModal';
+import { useUniversal } from './context/UniversalProvider';
 
 // Custom Hook
 import { useEntityDrag } from './hooks/useEntityDrag';
@@ -19,6 +17,7 @@ import { useEntityDrag } from './hooks/useEntityDrag';
 import { askGeminiForDesign, generateBackendCode } from './services/apiService';
 import type { Entity, Attribute, DesignData } from './types';
 import { PlusCircleOutlined } from '@ant-design/icons';
+import WelcomeScreen from './components/WelcomeScreen';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
@@ -30,10 +29,8 @@ function SchemaDesigner() {
   const [editingAttribute, setEditingAttribute] = useState<Attribute | null>(null);
 
   const [targetStack, setTargetStack] = useState<string>('fastapi');
-  const [, setIsLoading] = useState<boolean>(false);
+  const UniversalProvider = useUniversal();
 
-  // CORRECTED: Get the contextual message API instance from the useApp hook.
-  // We alias it to 'messageApi' to avoid confusion.
   const { message: messageApi } = AntApp.useApp();
 
   const { handleDragStart, handleDragMove, handleDragEnd, isDragging } = useEntityDrag(setEntities);
@@ -161,41 +158,29 @@ function SchemaDesigner() {
     }));
   }, []);
 
-  // Toolbar Action Handlers
+  // --- Toolbar Action Handlers ---
   const handleGenerateCode = async () => {
     if (entities.length === 0) {
       messageApi.warning('Cannot generate code. Please add at least one entity.');
       return;
     }
-    setIsLoading(true);
+
+    const geminiApiKey = UniversalProvider.apiKey;
+    const geminiModel = UniversalProvider.geminiModel;
+
+    UniversalProvider.setIsLoading(true); // will disable generate buttons if loading already
+
     const key = 'generate';
-    messageApi.loading({ content: 'Generating backend code...', key });
+    messageApi.loading({ content: 'Generating code... This may take several minutes!', key, duration: 0 });
     try {
-      const result = await generateBackendCode(entities, targetStack);
+      const result = await generateBackendCode(entities, targetStack, geminiApiKey, geminiModel);
       messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 2 });
-
-      // --- CORRECTED DOWNLOAD LOGIC ---
-      // This pattern prevents the page from reloading.
-
-      // 1. Create a temporary anchor element in memory.
-      const link = document.createElement('a');
-      link.href = result.download_url;
-
-      // 2. The 'download' attribute tells the browser to download the file instead of navigating to it.
-      // We can suggest a filename here, but browsers will often use the one from the server's response headers.
-      // An empty string is sufficient to trigger the download behavior.
-      link.setAttribute('download', '');
-
-      // 3. Append the link to the document, programmatically click it, and then remove it.
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
+      window.location.href = result.download_url; // Trigger download
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       messageApi.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
     } finally {
-      setIsLoading(false);
+      UniversalProvider.setIsLoading(false);
     }
   };
 
@@ -246,14 +231,24 @@ function SchemaDesigner() {
     reader.readAsText(file);
   };
 
-  const sendDesignPrompt = async (designPrompt: string) => {
+  const handleSendDesignPrompt = async (designPrompt: string) => {
     // Call the AI design generation function
     // Assuming askGeminiForDesign returns a promise that resolves to the JSON object
-    askGeminiForDesign(designPrompt)
+    messageApi.loading({ content: 'Generating design with AI...', key: 'ai-design', duration: 0 });
+    if (!designPrompt || designPrompt.trim() === '') {
+      messageApi.error({ content: "Design prompt cannot be empty.", key: 'ai-design'});
+      return;
+    }
+
+    UniversalProvider.setIsLoading(true);
+
+    // Call the AI service to generate the design
+    askGeminiForDesign(designPrompt, UniversalProvider.apiKey, UniversalProvider.geminiModel)
       .then(response => {
         const incomingEntities = response.entities;
 
         if (!incomingEntities || !Array.isArray(incomingEntities)) {
+          messageApi.error({ content: "Invalid AI response format.", key: 'ai-design'});
           throw new Error("Invalid or missing 'entities' array in AI response.");
         }
 
@@ -276,17 +271,23 @@ function SchemaDesigner() {
         setEntityCounter(hydratedEntities.length);
         setSelectedEntityId(null); // Deselect any currently selected entity
 
-        messageApi.success("AI design generated successfully!");
+        messageApi.success({content: "AI design generated successfully!", key: 'ai-design'});
       })
       .catch(error => {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        messageApi.error(`AI design generation failed: ${errorMessage}`);
+        messageApi.error({ content: `AI design generation failed: ${errorMessage}`, key: 'ai-design'});
+      })
+      .finally(() => {
+        UniversalProvider.setIsLoading(false);
       });
   }
 
 
   return (
     <div className="app-container">
+
+      <WelcomeScreen /> 
+
       <Toolbar
         targetStack={targetStack}
         onTargetStackChange={setTargetStack}
@@ -294,7 +295,7 @@ function SchemaDesigner() {
         onSaveDesign={handleSaveDesign}
         onLoadDesign={handleLoadDesign}
         onGenerate={handleGenerateCode}
-        onGenerateAIDesign={sendDesignPrompt}
+        onGenerateAIDesign={handleSendDesignPrompt}
       />
 
       <main

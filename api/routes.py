@@ -5,10 +5,12 @@ import json # Ensure json is imported here if used for logging/debugging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, HTTPException, Body, UploadFile, File, Form, Request # APIRouter is key here, Request for app.state
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi import APIRouter, HTTPException, Body, UploadFile, File, Form, Request # type: ignore # APIRouter is key here, Request for app.state
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse # type: ignore
 from generators.generator_utils import call_gemini_api
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field # type: ignore
+from starlette.concurrency import run_in_threadpool # type: ignore # <-- Import this for running blocking I/O
+
 
 # Import the generator function
 try:
@@ -61,28 +63,44 @@ class FullSchema(BaseModel):
     relationships: List[RelationshipSchema]
 
 class GenerateRequest(BaseModel):
+    gemini_api_key: str
+    gemini_model: str
     schema_data: FullSchema
     target_stack: str
+
 
 # --- API Endpoint Definitions ---
 
 # The root path "/" is now handled directly in engine.py for serving index.html.
-# If you needed an API specific root, you could add it here, e.g., @router.get("/info")
+# If you needed an API specific root, you could add it here, e.g., @router.get("/info") 
 
 @router.post("/generate", summary="Generate backend code from a visually designed JSON schema")
 async def generate_from_json_schema_route(
     request: Request, # To access app.state for configurations
-    payload: GenerateRequest
+    payload: GenerateRequest,
 ):
     # Access configurations from app.state (set in engine.py)
     temp_base_dir = request.app.state.TEMP_BASE_DIR
     downloads_root_dir = request.app.state.DOWNLOADS_ROOT_DIR
-
+        
+    # Get the payload data that was sent in the request body and break it down
     schema_data_dict = payload.schema_data.model_dump()
     target_stack = payload.target_stack.lower()
+    gemini_api_key = payload.gemini_api_key.strip()
+    gemini_model = payload.gemini_model.strip()
 
-    logger.info(f"API Route: Received /generate request for target_stack='{target_stack}'")
+    # Log the received request details
+    logger.info(f"API Route: Received /generate request for target_stack='{target_stack}' with API key {gemini_api_key}. and model {gemini_model}.")
     logger.debug(f"API Route: Schema received: {json.dumps(schema_data_dict, indent=2)}")
+    
+    # Validate the API key and model name
+    if not gemini_api_key or not gemini_model:
+        logger.error("API Route: Missing Gemini API key or model name in request.")
+        raise HTTPException(status_code=400, detail="Gemini API key and model name are required.")
+    
+    import os
+    os.environ["GEMINI_API_KEY"] = gemini_api_key
+    os.environ["GEMINI_API_MODEL"] = gemini_model
 
     run_id = str(uuid.uuid4())
     # run_processing_base_dir is where the generator will create its project subfolder
@@ -105,7 +123,7 @@ async def generate_from_json_schema_route(
             logger.info(f"API Route: FastAPI generator completed. Project source at: {generated_project_path}")
         elif target_stack == "springboot":
             logger.info(f"API Route: Calling Spring Boot generator for run {run_id}...")
-            generated_project_path = await generate_springboot_project(
+            generated_project_path = await generate_springboot_project( # type: ignore
                 schema_data_dict,
                 output_base_dir=run_processing_base_dir # The generator will create a subfolder here
             )
@@ -118,13 +136,15 @@ async def generate_from_json_schema_route(
             # This might happen if the generator itself failed internally and didn't create the dir.
             raise Exception("Code generation failed: The generator did not produce a project directory.")
 
-        # Now, ZIP the contents of the specific 'generated_project_path' directory
-        logger.info(f"API Route: Zipping project from: {generated_project_path} into {zip_output_path_no_ext}.zip")
-        shutil.make_archive(
-            base_name=str(zip_output_path_no_ext), # Path for the output zip file, without .zip
-            format="zip",                          # ZIP format
-            root_dir=str(generated_project_path.parent), # The parent of the dir to zip (e.g., run_processing_base_dir)
-            base_dir=generated_project_path.name   # The name of the dir to zip (e.g., fastapi_project_xxxx)
+        # --- CORRECTED ZIPPING LOGIC ---
+        # Run the blocking shutil.make_archive in a thread pool to avoid blocking the event loop
+        # and ensure it completes before we proceed.
+        await run_in_threadpool(
+            shutil.make_archive,
+            base_name=str(zip_output_path_no_ext),
+            format="zip",
+            root_dir=str(generated_project_path.parent),
+            base_dir=generated_project_path.name
         )
         logger.info(f"API Route: Project successfully zipped: {generated_zip_name}")
 
@@ -160,10 +180,18 @@ async def generate_ai_schema_route(
     payload: Dict[str, Any] # Expecting a simple payload like {"prompt": "..."}
 ):
     prompt_text = payload.get("prompt")
-    if not prompt_text:
-        raise HTTPException(status_code=400, detail="A 'prompt' field is required.")
-
+    gemini_api_key = payload.get("gemini_api_key")
+    gemini_model = payload.get("gemini_model")
+    if not prompt_text or not gemini_api_key or not gemini_model:
+        logger.error("API Route: Missing prompt, Gemini API key, or model name in request.")
+        raise HTTPException(status_code=400, detail="Prompt, Gemini API key, and model name are required.")
+    
     logger.info(f"API Route: Received /generate-ai-schema request.")
+    
+    # Set the API key and model name
+    import os
+    os.environ["GEMINI_API_KEY"] = gemini_api_key
+    os.environ["GEMINI_API_MODEL"] = gemini_model
     
     # load the prompt template from a file:
     prompt_template_path = request.app.state.PROMPT_TEMPLATE_PATH # This should be set in engine.py
