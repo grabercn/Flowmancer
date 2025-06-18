@@ -1,17 +1,18 @@
 import React, { useRef, useState } from 'react';
-import { Button, Select, Drawer, Space, Typography, Popover, Input } from 'antd';
+import { Button, Select, Drawer, Space, Popover, Input, Image } from 'antd';
 import {
     PlusCircleOutlined,
     SaveOutlined,
     FolderOpenOutlined,
-    CodeOutlined,
     MenuOutlined,
     GoldOutlined,
 } from '@ant-design/icons';
 import { SettingsPopup } from './SettingsForm';
 import { useUniversal } from '../context/UniversalProvider';
+import brandLogo from '../assets/branding/no-bg-flowmancer-brand-logo.png'
+import brandText from "../assets/branding/no-bg-flowmancer-brand-text.png"
 
-const { Title } = Typography;
+
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -50,13 +51,13 @@ export function Toolbar({
     const Actions = (
         <Space direction="horizontal" style={{ width: '100%' }}>
             <SettingsPopup />
-            <Button icon={<PlusCircleOutlined />} onClick={onAddEntity} disabled={UniversalProvider.isLoading}>Add Entity</Button>
-            <Button icon={<SaveOutlined />} onClick={onSaveDesign} disabled={UniversalProvider.isLoading}>Save Design</Button>
-            <Button icon={<FolderOpenOutlined />} onClick={handleLoadClick} disabled={UniversalProvider.isLoading}>Load Design</Button>
+            <Button icon={<PlusCircleOutlined />} onClick={onAddEntity} disabled={UniversalProvider.state.isLoading}>Add Entity</Button>
+            <Button icon={<SaveOutlined />} onClick={onSaveDesign} disabled={UniversalProvider.state.isLoading}>Save Design</Button>
+            <Button icon={<FolderOpenOutlined />} onClick={handleLoadClick} disabled={UniversalProvider.state.isLoading}>Load Design</Button>
             <Popover
                 content={
                     <div style={{ width: 260 }}>
-                        <p>Describe your desired schema.</p>
+                        <p>Describe your desired schema. <i>This will replace the current schema.</i></p>
                         <TextArea
                             value={aiPrompt}
                             onChange={e => setAiPrompt(e.target.value)}
@@ -67,7 +68,7 @@ export function Toolbar({
                         <Button
                             type="primary"
                             onClick={handleAIGenerate}
-                            disabled={!aiPrompt.trim() || UniversalProvider.apiKey.trim() === '' || UniversalProvider.geminiModel.trim() === ''}
+                            disabled={!aiPrompt.trim() || UniversalProvider.settings.apiKey.trim() === '' || UniversalProvider.settings.geminiModel.trim() === ''}
                             block
                         >
                             Generate
@@ -82,9 +83,9 @@ export function Toolbar({
             >
                 <Button
                     type="text"
-                    disabled={!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() || UniversalProvider.isLoading}
+                    disabled={!UniversalProvider.settings.apiKey.trim() || !UniversalProvider.settings.geminiModel.trim() || UniversalProvider.state.isLoading}
                     icon={<GoldOutlined />}
-                >{!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() ? 'Check Settings' : 'Generate AI Design'}</Button>
+                >{!UniversalProvider.settings.apiKey.trim() || !UniversalProvider.settings.geminiModel.trim() ? 'Check Settings' : 'Generate AI Design'}</Button>
             </Popover>
         </Space>
     );
@@ -92,23 +93,33 @@ export function Toolbar({
     return (
         <header className="app-toolbar">
             <div className="toolbar-section-left">
-                <CodeOutlined style={{ fontSize: 24, color: '#1677ff' }} />
-                <Title level={4} style={{ margin: 0, display: 'none' }} className="desktop-only-title">
-                    ER 2 Backend - Designer
-                </Title>
+                <Image src={brandLogo} width={45} preview={false} />
+                <Image src={brandText} width={200} preview={false} style={{ marginLeft: '-12px' }} />
             </div>
             <nav className="toolbar-section-center desktop-only">{Actions}</nav>
             <div className="toolbar-section-right">
-                <Select value={targetStack} onChange={onTargetStackChange} disabled={UniversalProvider.isLoading} style={{ width: 180 }}>
+                <Select value={targetStack} onChange={onTargetStackChange} disabled={UniversalProvider.state.isLoading} style={{ width: 180 }}>
                     <Option value="fastapi">FastAPI (Python)</Option>
                     <Option value="springboot">Spring Boot (Java)</Option>
                     <Option value="dotnet" disabled>.NET (soon)</Option>
                 </Select>
                 <Button
                     type="primary"
-                    disabled={!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() || UniversalProvider.isLoading }
+                    className={`toolbar-generate-button ${UniversalProvider.state.isLoading ? 'loading' : 'idle'}`}
+                    disabled={
+                        !UniversalProvider.settings.apiKey.trim() ||
+                        !UniversalProvider.settings.geminiModel.trim() ||
+                        UniversalProvider.state.isLoading
+                    }
                     onClick={onGenerate}
-                >{!UniversalProvider.apiKey.trim() || !UniversalProvider.geminiModel.trim() ? 'Check Settings' : 'Generate Backend'}</Button>
+                >
+                    {
+                        !UniversalProvider.settings.apiKey.trim() ||
+                            !UniversalProvider.settings.geminiModel.trim()
+                            ? 'Check Settings'
+                            : 'Generate Backend'
+                    }
+                </Button>
                 <div className="mobile-only-menu">
                     <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
                 </div>
@@ -125,7 +136,7 @@ export function Toolbar({
                 placement="right"
                 onClose={() => setDrawerOpen(false)}
                 open={drawerOpen}
-                bodyStyle={{ padding: 16 }}
+                styles={{ body: { padding: 16 } }}
             >
                 {Actions}
             </Drawer>

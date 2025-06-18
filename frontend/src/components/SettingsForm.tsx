@@ -137,9 +137,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
   useEffect(() => {
     if (isPopoverOpen) {
       form.setFieldsValue({
-        apiKey: universalProvider.apiKey,
-        geminiModel: universalProvider.geminiModel,
-        theme: universalProvider.darkMode,
+        apiKey: universalProvider.settings.apiKey,
+        geminiModel: universalProvider.settings.geminiModel,
+        theme: universalProvider.settings.darkMode,
       });
     }
   }, [isPopoverOpen, universalProvider, form]);
@@ -147,9 +147,9 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
   const handleSave = () => {
     form.validateFields()
       .then(values => {
-        universalProvider.setApiKey(values.apiKey);
-        universalProvider.setGeminiModel(values.geminiModel);
-        universalProvider.setDarkMode(values.theme);
+        universalProvider.settings.setApiKey(values.apiKey);
+        universalProvider.settings.setGeminiModel(values.geminiModel);
+        universalProvider.settings.setDarkMode(values.theme);
         messageApi.success({ content: "Settings saved successfully!" });
         setIsPopoverOpen(false); // Close popover on successful save
       })

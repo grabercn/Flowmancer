@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, UnidentifiedImageError
 import cv2 # OpenCV for image pre-processing if needed, or drawing
 import numpy as np
 
-from ultralytics import YOLO # For YOLOv8 inference
+from ultralytics import YOLO # type: ignore # For YOLOv8 inference
 from .ocr_utils import ocr_read, initialize_ocr as initialize_parser_ocr # Use our actual OCR
 
 logger = logging.getLogger(__name__)
@@ -431,7 +431,7 @@ if __name__ == '__main__':
         try:
             schema = parse_image_to_schema(str(sample_image_file))
             print("\n--- Generated Schema ---")
-            print(json.dumps(schema, indent=2))
+            print(json.dumps(schema, indent=2)) # type: ignore
 
             # Optional: Save an image with detected boxes drawn (for debugging)
             # image_pil_for_drawing = Image.open(sample_image_file).convert("RGB")

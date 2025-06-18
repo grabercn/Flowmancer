@@ -10,9 +10,9 @@ import {
     Steps,
     Form, // Import Ant Design Form
     App as AntApp,
+    Image,
 } from 'antd';
 import {
-    CodeOutlined,
     GithubOutlined,
     CoffeeOutlined,
     ToolOutlined,
@@ -23,6 +23,8 @@ import Cookies from 'js-cookie';
 import { useUniversal } from '../context/UniversalProvider';
 import { SettingsForm } from './SettingsForm'; // <-- Import the reusable form component
 import type { FormInstance } from 'antd';
+import brandLogo from "../assets/branding/no-bg-flowmancer-brand-logo.png"
+import brandText from "../assets/branding/no-bg-flowmancer-brand-text.png"
 
 const { Title, Paragraph } = Typography;
 
@@ -31,6 +33,12 @@ const WELCOME_COOKIE_NAME = 'er2_backend_welcome_shown';
 // --- Step 1: Welcome Content ---
 const WelcomeStepContent = () => (
     <div style={{ padding: '0 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+            <Space align="center" size="middle" direction="vertical">
+                <Image src={brandLogo} width={100} alt="Flowmancer Logo" preview={false} />
+                <Title>Welcome to Flowmancer</Title>
+            </Space>
+        </div>
         <Paragraph style={{ fontSize: '16px', marginTop: '16px' }}>
             Visually design your database schema on the canvas and instantly generate production-ready backend code for FastAPI, Spring Boot, and more.
         </Paragraph>
@@ -85,9 +93,9 @@ const WelcomeScreen: React.FC = () => {
             setIsModalVisible(true);
             // Set initial form values from context when modal opens
             form.setFieldsValue({
-                apiKey: universalProvider.apiKey,
-                geminiModel: universalProvider.geminiModel,
-                theme: universalProvider.darkMode,
+                apiKey: universalProvider.settings.apiKey,
+                geminiModel: universalProvider.settings.geminiModel,
+                theme: universalProvider.settings.darkMode,
             });
         }
     }, []); // useEffect now has an empty dependency array as it should only run once on mount
@@ -100,11 +108,11 @@ const WelcomeScreen: React.FC = () => {
         form.validateFields()
             .then(async values => {
                 // On success, save the settings to our global context
-                universalProvider.setApiKey(values.apiKey);
-                universalProvider.setGeminiModel(values.geminiModel);
-                universalProvider.setDarkMode(values.theme);
+                universalProvider.settings.setApiKey(values.apiKey);
+                universalProvider.settings.setGeminiModel(values.geminiModel);
+                universalProvider.settings.setDarkMode(values.theme);
 
-                messageApi.success("Settings saved! Welcome to ER²Backend Designer!");
+                messageApi.success("Settings saved! Welcome to Flowmancer!");
 
                 // Close the modal and set the cookie
                 fireConfetti();
@@ -169,12 +177,11 @@ const WelcomeScreen: React.FC = () => {
     return (
         <Modal
             title={
-                <Space align="center" size="middle">
-                    <CodeOutlined style={{ fontSize: 28, color: '#1677ff' }} />
-                    <Title level={3} style={{ margin: 0 }}>
-                        Welcome to ER²Backend Designer!
-                    </Title>
-                </Space>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                    <Space align="center" size="middle" direction="vertical">
+                        <Image src={brandText} width={200} alt="Flowmancer Logo" preview={false} style={{ marginTop: '-16px' }} />
+                    </Space>
+                </div>
             }
             open={isModalVisible}
             footer={modalFooter}

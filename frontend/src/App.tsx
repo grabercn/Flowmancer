@@ -166,10 +166,10 @@ function SchemaDesigner() {
       return;
     }
 
-    const geminiApiKey = UniversalProvider.apiKey;
-    const geminiModel = UniversalProvider.geminiModel;
+    const geminiApiKey = UniversalProvider.settings.apiKey;
+    const geminiModel = UniversalProvider.settings.geminiModel;
 
-    UniversalProvider.setIsLoading(true); // will disable generate buttons if loading already
+    UniversalProvider.state.setIsLoading(true); // will disable generate buttons if loading already
 
     const key = 'generate';
     messageApi.loading({ content: 'Generating code... This may take several minutes!', key, duration: 0 });
@@ -182,7 +182,7 @@ function SchemaDesigner() {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       messageApi.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
     } finally {
-      UniversalProvider.setIsLoading(false);
+      UniversalProvider.state.setIsLoading(false);
     }
   };
 
@@ -242,10 +242,10 @@ function SchemaDesigner() {
       return;
     }
 
-    UniversalProvider.setIsLoading(true);
+    UniversalProvider.state.setIsLoading(true);
 
     // Call the AI service to generate the design
-    askGeminiForDesign(designPrompt, UniversalProvider.apiKey, UniversalProvider.geminiModel)
+    askGeminiForDesign(designPrompt, UniversalProvider.settings.apiKey, UniversalProvider.settings.geminiModel)
       .then(response => {
         const incomingEntities = response.entities;
 
@@ -281,7 +281,7 @@ function SchemaDesigner() {
         messageApi.error({ content: `AI design generation failed: ${errorMessage}`, key: 'ai-design'});
       })
       .finally(() => {
-        UniversalProvider.setIsLoading(false);
+        UniversalProvider.state.setIsLoading(false);
       });
   }
   
