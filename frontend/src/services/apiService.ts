@@ -3,7 +3,13 @@
 import type { Entity, Relationship, ApiSchema } from '../types';
 
 // The API prefix defined in your FastAPI backend (engine.py)
-const API_BASE_URL = 'http://127.0.0.1:8000/api'; 
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const API_BASE_URL = isLocalhost
+  ? 'http://127.0.0.1:8000/api'
+  : 'https://flowmancer.onrender.com/api';
+
+export { API_BASE_URL };
 
 /**
  * Transforms the frontend Entity state into the format required by the backend API.

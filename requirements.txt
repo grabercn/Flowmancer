@@ -2,15 +2,4 @@ fastapi
 uvicorn
 gunicorn
 aiohttp
-python-dotenv
 google-generativeai
-pydantic
-json
-logging
-pathlib
-typing
-uuid
-asyncio
-os
-re
-shutil
