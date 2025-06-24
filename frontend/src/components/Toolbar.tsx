@@ -6,6 +6,7 @@ import {
     FolderOpenOutlined,
     MenuOutlined,
     GoldOutlined,
+    CodeOutlined,
 } from '@ant-design/icons';
 import { SettingsPopup } from './SettingsForm';
 import { useUniversal } from '../context/UniversalProvider';
@@ -93,6 +94,18 @@ export function Toolbar({
         <div className="toolbar-actions">
             <div className="toolbar-settings">
                 <SettingsPopup />
+            </div>
+            <div className='toolbar-settings'>
+                <Button
+                    shape="circle"
+                    type='dashed'
+                    icon={<CodeOutlined />}
+                    onClick={() => {
+                        UniversalProvider.state.setIsFrontEndMode(true);
+                        setDrawerOpen(false);
+                    }}
+                    disabled={UniversalProvider.state.isLoading}
+                />
             </div>
             <Button
                 icon={<PlusCircleOutlined />}

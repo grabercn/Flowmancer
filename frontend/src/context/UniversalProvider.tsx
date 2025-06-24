@@ -30,7 +30,9 @@ type Settings = {
 
 type State = {
   isLoading: boolean;
+  isFrontEndMode: boolean;
   setIsLoading: (value: boolean) => void;
+  setIsFrontEndMode: (value: boolean) => void;
 };
 
 type UniversalContextType = {
@@ -85,8 +87,12 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const state: State = {
+    isFrontEndMode: false,
     isLoading,
     setIsLoading: setIsLoadingState,
+    setIsFrontEndMode: (value: boolean) => {
+      state.isFrontEndMode = value;
+    },
   };
 
   return (
