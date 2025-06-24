@@ -3,3 +3,6 @@ uvicorn
 gunicorn
 aiohttp
 google-generativeai
+pycryptodome>=3.19.0
+hashlib
+python-dotenv

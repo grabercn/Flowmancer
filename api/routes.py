@@ -15,6 +15,7 @@ try:
     from generators.fastapi_generator import generate_fastapi_project
     from generators.springboot_generator import generate_springboot_project
     from generators.dotnet_generator import generate_dotnet_project
+    from parser.crypto_utils import decrypt_api_key
 except ImportError as e:
     logging.critical(f"Could not import one or more project generators: {e}")
     # Define placeholders so the app can still start and report errors gracefully.
@@ -25,8 +26,10 @@ except ImportError as e:
         raise RuntimeError(f"SpringBoot generator module is unavailable: {e}")
     async def generate_dotnet_project(schema_data: Dict[str, Any], output_base_dir: Path) -> Tuple[Path, Dict[str, Any]]: # type: ignore
         raise RuntimeError(f".NET generator module is unavailable: {e}")
+    def decrypt_api_key(encrypted_b64: str) -> str:
+        raise RuntimeError("decrypt_api_key is not available because the import failed.")
 
-call_gemini_api: Any # Declare call_gemini_api as Any to resolve potential unbound error
+call_gemini_api: Any = None # Declare call_gemini_api as Any to resolve potential unbound error
 
 try: 
     from generators.generator_utils import call_gemini_api
@@ -59,7 +62,7 @@ async def generate_full_project_route(request: Request, payload: GenerateRequest
     downloads_root_dir = request.app.state.DOWNLOADS_ROOT_DIR
     schema_data_dict = payload.schema_data.model_dump()
     target_stack = payload.target_stack.lower()
-    gemini_api_key = payload.gemini_api_key
+    gemini_api_key = payload.gemini_api_key 
     gemini_model = payload.gemini_model
     
     if not schema_data_dict:
@@ -71,6 +74,9 @@ async def generate_full_project_route(request: Request, payload: GenerateRequest
     if not gemini_model:
         raise HTTPException(status_code=400, detail="Gemini model is not specified.")
 
+    # Decrypt the api key
+    gemini_api_key = decrypt_api_key(payload.gemini_api_key) 
+    
     # Set environment variables for the generator utility
     import os
     os.environ["GEMINI_API_KEY"] = gemini_api_key
@@ -153,6 +159,9 @@ async def generate_ai_schema_route(request: Request, payload: GenerateSchema):
         raise HTTPException(status_code=400, detail="A 'gemini_api_key' field is required.")
     if not gemini_model:
         raise HTTPException(status_code=400, detail="A 'gemini_model' field is required.")
+    
+    # Decrypt the api key
+    gemini_api_key = decrypt_api_key(payload.gemini_api_key) 
     
     import os
     os.environ["GEMINI_API_KEY"] = gemini_api_key

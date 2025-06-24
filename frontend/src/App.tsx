@@ -19,6 +19,7 @@ import type { Entity, Attribute, DesignData } from './types';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import WelcomeScreen from './components/WelcomeScreen';
 import confetti from 'canvas-confetti';
+import { encryptApiKey } from './utils/cryptoUtils';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
@@ -166,7 +167,7 @@ function SchemaDesigner() {
       return;
     }
 
-    const geminiApiKey = UniversalProvider.settings.apiKey;
+    const geminiApiKey = encryptApiKey(UniversalProvider.settings.apiKey);
     const geminiModel = UniversalProvider.settings.geminiModel;
 
     UniversalProvider.state.setIsLoading(true); // will disable generate buttons if loading already
@@ -246,8 +247,11 @@ function SchemaDesigner() {
 
     UniversalProvider.state.setIsLoading(true);
 
+    const geminiApiKey = encryptApiKey(UniversalProvider.settings.apiKey);
+    const geminiModel = UniversalProvider.settings.geminiModel;
+
     // Call the AI service to generate the design
-    askGeminiForDesign(designPrompt, UniversalProvider.settings.apiKey, UniversalProvider.settings.geminiModel)
+    askGeminiForDesign(designPrompt, encryptApiKey(geminiApiKey), geminiModel)
       .then(response => {
         const incomingEntities = response.entities;
 
