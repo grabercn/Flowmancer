@@ -13,7 +13,15 @@ import { useThemeVariables } from './hooks/useThemeVariables.ts';
 const WithProviders = () => {
   // here we set the properties and colors used for dark mode...
   const darkMode = useUniversal().settings.darkMode;
-  useThemeVariables(darkMode); // this sets css props based on dark mode value
+  if(darkMode == "system" && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      useThemeVariables("dark"); // this sets css props based on dark mode value
+      useUniversal().settings.setDarkMode("dark");
+    }  else if(darkMode == "system" && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      useThemeVariables("light");
+      useUniversal().settings.setDarkMode("light");
+  } else {
+    useThemeVariables(darkMode);
+  }
 
   return (
     <ConfigProvider

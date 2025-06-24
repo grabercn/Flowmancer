@@ -31,12 +31,36 @@ body {
   z-index: 100;
 }
 
-.toolbar-section-left,
+.toolbar-section-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 1; /* Allow it to shrink */
+  min-width: 0%;
+}
+
 .toolbar-section-center,
+  
 .toolbar-section-right {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+
+.toolbar-settings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-target-stack { 
+  margin-left: 16px;
 }
 
 .toolbar-section-center {
@@ -226,13 +250,10 @@ body {
   display: none; 
 }
 
-/* By default, the mobile floating button is visible. */
+/* Default: only mobile trigger shown on small screens */
 .mobile-properties-trigger {
-    display: block; 
-    position: absolute; /* This can be adjusted if it conflicts with antd's FloatButton default */
-    bottom: 24px;
-    left: 24px;
-    z-index: 50; /* Ensure it's above canvas but below modals */
+  display: block;
+  z-index: 500;
 }
 
 /* Media query for larger screens (tablets and desktops) */
@@ -273,11 +294,32 @@ body {
   .properties-panel {
     display: none;
   }
+  .brand-text {
+    display: none;
+  }
+  .toolbar-section-right {
+    margin-left: auto; /* Push right section to the right */
+  }
+  .ant-popover-inner-content p {
+    font-size: 14px;
+  }
+  .toolbar-actions {
+    flex-direction: column;
+  }
+  .toolbar-target-stack { 
+    margin-left: -10px;
+  }
 }
 
-/* On larger screens, show the desktop-specific toolbar items */
-@media (min-width: 768px) {
+/* On larger screens, show the desktop-specific toolbar items and hide the mobile menu button */
+@media (min-width: 1023px) {
   .toolbar-section-center { display: flex; }
   .mobile-only-menu { display: none; }
   .desktop-only-title { display: block !important; }
+  .mobile-properties-trigger {
+    display: none !important;
+  }
+  .mobile-properties-drawer {
+    display: none !important;
+  }
 }

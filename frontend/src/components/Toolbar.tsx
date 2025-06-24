@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Button, Select, Drawer, Space, Popover, Input, Image } from 'antd';
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, Select, Drawer, Popover, Input, Image } from 'antd';
 import {
     PlusCircleOutlined,
     SaveOutlined,
@@ -9,9 +9,8 @@ import {
 } from '@ant-design/icons';
 import { SettingsPopup } from './SettingsForm';
 import { useUniversal } from '../context/UniversalProvider';
-import brandLogo from '../assets/branding/no-bg-flowmancer-brand-logo.png'
-import brandText from "../assets/branding/no-bg-flowmancer-brand-text.png"
-
+import brandLogo from '../assets/branding/no-bg-flowmancer-brand-logo.png';
+import brandText from '../assets/branding/no-bg-flowmancer-brand-text.png';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -37,72 +36,163 @@ export function Toolbar({
 }: ToolbarProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [aiPopoverOpen, setAiPopoverOpen] = useState(false);
+    const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
+    const [isMobile, setIsMobile] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const UniversalProvider = useUniversal();
-    
 
-    const handleLoadClick = () => fileInputRef.current?.click();
+    useEffect(() => {
+        const updateDevice = () => setIsMobile(window.innerWidth <= 768);
+        updateDevice();
+        window.addEventListener('resize', updateDevice);
+        return () => window.removeEventListener('resize', updateDevice);
+    }, []);
+
+    const handleLoadClick = () => {
+        fileInputRef.current?.click();
+        setDrawerOpen(false);
+    };
+
     const handleAIGenerate = () => {
         onGenerateAIDesign(aiPrompt);
         setAiPopoverOpen(false);
+        setAiDrawerOpen(false);
+        setDrawerOpen(false);
+        setAiPrompt('');
     };
 
-    const Actions = (
-        <Space direction="horizontal" style={{ width: '100%' }}>
-            <SettingsPopup />
-            <Button icon={<PlusCircleOutlined />} onClick={onAddEntity} disabled={UniversalProvider.state.isLoading}>Add Entity</Button>
-            <Button icon={<SaveOutlined />} onClick={onSaveDesign} disabled={UniversalProvider.state.isLoading}>Save Design</Button>
-            <Button icon={<FolderOpenOutlined />} onClick={handleLoadClick} disabled={UniversalProvider.state.isLoading}>Load Design</Button>
-            <Popover
-                content={
-                    <div style={{ width: 260 }}>
-                        <p>Describe your desired schema. <i>This will replace the current schema.</i></p>
-                        <TextArea
-                            value={aiPrompt}
-                            onChange={e => setAiPrompt(e.target.value)}
-                            rows={3}
-                            placeholder="Describe your design requirements..."
-                            style={{ marginBottom: 8 }}
-                        />
-                        <Button
-                            type="primary"
-                            onClick={handleAIGenerate}
-                            disabled={!aiPrompt.trim() || UniversalProvider.settings.apiKey.trim() === '' || UniversalProvider.settings.geminiModel.trim() === ''}
-                            block
-                        >
-                            Generate
-                        </Button>
-                    </div>
+    const aiInputUI = (
+        <div style={{ width: '100%' }} onMouseDown={(e) => e.stopPropagation()}>
+            <p>Describe your desired schema. <i>This will replace the current schema.</i></p>
+            <TextArea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={3}
+                placeholder="Describe your design requirements..."
+                style={{ marginBottom: 8 }}
+            />
+            <Button
+                type="primary"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleAIGenerate}
+                disabled={
+                    !aiPrompt.trim() ||
+                    UniversalProvider.settings.apiKey.trim() === '' ||
+                    UniversalProvider.settings.geminiModel.trim() === ''
                 }
-                title="Generate Schema with AI"
-                trigger="click"
-                open={aiPopoverOpen}
-                onOpenChange={setAiPopoverOpen}
-                placement="bottom"
+                block
             >
+                Generate
+            </Button>
+        </div>
+    );
+
+    const Actions = (
+        <div className="toolbar-actions">
+            <div className="toolbar-settings">
+                <SettingsPopup />
+            </div>
+            <Button
+                icon={<PlusCircleOutlined />}
+                onClick={() => {
+                    onAddEntity();
+                    setDrawerOpen(false);
+                }}
+                disabled={UniversalProvider.state.isLoading}
+                block
+                size="large"
+            >
+                Add Entity
+            </Button>
+            <Button
+                icon={<SaveOutlined />}
+                onClick={onSaveDesign}
+                disabled={UniversalProvider.state.isLoading}
+                block
+                size="large"
+            >
+                Save Design
+            </Button>
+            <Button
+                icon={<FolderOpenOutlined />}
+                onClick={handleLoadClick}
+                disabled={UniversalProvider.state.isLoading}
+                block
+                size="large"
+            >
+                Load Design
+            </Button>
+
+            {isMobile ? (
                 <Button
-                    type="text"
-                    disabled={!UniversalProvider.settings.apiKey.trim() || !UniversalProvider.settings.geminiModel.trim() || UniversalProvider.state.isLoading}
+                    type="default"
+                    disabled={
+                        !UniversalProvider.settings.apiKey.trim() ||
+                        !UniversalProvider.settings.geminiModel.trim() ||
+                        UniversalProvider.state.isLoading
+                    }
                     icon={<GoldOutlined />}
-                >{!UniversalProvider.settings.apiKey.trim() || !UniversalProvider.settings.geminiModel.trim() ? 'Check Settings' : 'Generate AI Design'}</Button>
-            </Popover>
-        </Space>
+                    block
+                    size="large"
+                    onClick={() => setAiDrawerOpen(true)}
+                >
+                    {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
+                        ? 'Generate AI Design'
+                        : 'Check Settings'}
+                </Button>
+            ) : (
+                <Popover
+                    content={aiInputUI}
+                    title="Generate Schema with AI"
+                    trigger="click"
+                    open={aiPopoverOpen}
+                    onOpenChange={setAiPopoverOpen}
+                    getPopupContainer={(triggerNode) => triggerNode.parentElement!}
+                    placement="bottom"
+                >
+                    <Button
+                        type="default"
+                        disabled={
+                            !UniversalProvider.settings.apiKey.trim() ||
+                            !UniversalProvider.settings.geminiModel.trim() ||
+                            UniversalProvider.state.isLoading
+                        }
+                        icon={<GoldOutlined />}
+                        block
+                        size="large"
+                    >
+                        {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
+                            ? 'Generate AI Design'
+                            : 'Check Settings'}
+                    </Button>
+                </Popover>
+            )}
+        </div>
     );
 
     return (
         <header className="app-toolbar">
-            <div className="toolbar-section-left">
-                <Image src={brandLogo} width={45} preview={false} />
-                <Image src={brandText} width={200} preview={false} style={{ marginLeft: '-12px' }} />
+            <div className="toolbar-section-left" style={{ filter: UniversalProvider.settings.darkMode.includes('dark') ? 'brightness(0) invert(1)' : 'none' }}>
+                <Image src={brandLogo} width={45} preview={false} className="brand-logo" />
+                <Image src={brandText} width={200} preview={false} style={{ marginLeft: '-12px' }} className="brand-text" />
             </div>
+
             <nav className="toolbar-section-center desktop-only">{Actions}</nav>
+
             <div className="toolbar-section-right">
-                <Select value={targetStack} onChange={onTargetStackChange} disabled={UniversalProvider.state.isLoading} style={{ width: 180 }}>
+                <Select
+                    value={targetStack}
+                    className="toolbar-target-stack"
+                    onChange={onTargetStackChange}
+                    disabled={UniversalProvider.state.isLoading}
+                >
                     <Option value="fastapi">FastAPI (Python)</Option>
                     <Option value="springboot">Spring Boot (Java)</Option>
-                    <Option value="dotnet" disabled>.NET (soon)</Option>
+                    <Option value="dotnet">.NET (MS C#)</Option>
                 </Select>
+
                 <Button
                     type="primary"
                     className={`toolbar-generate-button ${UniversalProvider.state.isLoading ? 'loading' : 'idle'}`}
@@ -115,15 +205,17 @@ export function Toolbar({
                 >
                     {
                         !UniversalProvider.settings.apiKey.trim() ||
-                            !UniversalProvider.settings.geminiModel.trim()
+                        !UniversalProvider.settings.geminiModel.trim()
                             ? 'Check Settings'
                             : 'Generate Backend'
                     }
                 </Button>
+
                 <div className="mobile-only-menu">
                     <Button type="text" icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
                 </div>
             </div>
+
             <input
                 type="file"
                 ref={fileInputRef}
@@ -131,6 +223,7 @@ export function Toolbar({
                 style={{ display: 'none' }}
                 accept=".json"
             />
+
             <Drawer
                 title="Actions"
                 placement="right"
@@ -138,7 +231,25 @@ export function Toolbar({
                 open={drawerOpen}
                 styles={{ body: { padding: 16 } }}
             >
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                    <div style={{ filter: UniversalProvider.settings.darkMode.includes('dark') ? 'brightness(0) invert(1)' : 'none' }}>
+                        <Image src={brandLogo} width={45} preview={false} className="brand-logo" style={{ marginBottom: 8, marginRight: 8 }} />
+                        <Image src={brandText} width={100} preview={false} />
+                    </div>
+                </div>
                 {Actions}
+            </Drawer>
+
+            {/* Mobile AI Input Drawer */}
+            <Drawer
+                title="Generate Schema with AI"
+                placement="bottom"
+                onClose={() => setAiDrawerOpen(false)}
+                open={aiDrawerOpen}
+                height="40%"
+                styles={{ body: { padding: 16 } }}
+            >
+                {aiInputUI}
             </Drawer>
         </header>
     );

@@ -34,7 +34,7 @@ function SchemaDesigner() {
 
   const { message: messageApi } = AntApp.useApp();
 
-  const { handleDragStart, handleDragMove, handleDragEnd, isDragging } = useEntityDrag(setEntities);
+  const { handleDragStart, handleDragMove, handleDragEnd, isDragging, handleTouchEnd, handleTouchMove, handleTouchStart } = useEntityDrag(setEntities);
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -176,7 +176,9 @@ function SchemaDesigner() {
     try {
       const result = await generateBackendCode(entities, targetStack, geminiApiKey, geminiModel);
       fireConfetti();
-      messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 2 });
+      UniversalProvider.state.setIsLoading(false);
+      messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 3 });
+      await new Promise(resolve => setTimeout(resolve, 3000));
       window.location.href = result.download_url; // Trigger download
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -324,6 +326,8 @@ function SchemaDesigner() {
         onMouseMove={handleDragMove}
         onMouseUp={handleDragEnd}
         onMouseLeave={handleDragEnd}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div ref={canvasWrapperRef} className="canvas-area">
           <div className="canvas-area-inner" style={{ cursor: isDragging ? 'grabbing' : 'default' }}>
@@ -334,6 +338,9 @@ function SchemaDesigner() {
                 isSelected={entity.id === selectedEntityId}
                 onSelect={handleSelectEntity}
                 onDragStart={handleDragStart}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               />
             ))}
             {entities.length === 0 && (

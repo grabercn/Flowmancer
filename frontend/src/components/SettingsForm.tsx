@@ -1,7 +1,10 @@
 // frontend/src/components/SettingsForm.tsx
 
-import React, { useEffect, useState } from 'react';
-import { Form, Input, Select, Space, Button, Popover, App as AntApp } from 'antd';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  Form, Input, Select, Space, Button,
+  Popover, Drawer, App as AntApp
+} from 'antd';
 import type { FormInstance } from 'antd';
 import { useUniversal } from '../context/UniversalProvider';
 import {
@@ -11,15 +14,12 @@ import {
   ThunderboltOutlined,
   RocketOutlined,
   SettingOutlined,
-  EyeOutlined,
-  HistoryOutlined,
+  SyncOutlined,
+  ToolOutlined
 } from '@ant-design/icons';
 
 const { Option } = Select;
 
-// --- 1. Reusable Settings Form Component ---
-// This component is "dumb" and only contains the form fields.
-// It receives its form instance from the parent.
 interface SettingsFormProps {
   form: FormInstance;
 }
@@ -30,13 +30,22 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ form }) => {
       form={form}
       layout="vertical"
       name="settings_form"
-      style={{ width: 320 }}
+      style={{ width: '100%' }}
     >
       <Form.Item
         name="apiKey"
         label="Gemini API Key"
         rules={[{ required: true, message: 'An API key is required.' }]}
-        tooltip="Your API key is stored locally in your browser's cookies and is never sent to our servers."
+        tooltip={{
+          title: (
+            <Space direction="vertical" size={4}>
+              <span>Your API key is stored locally in your browser and never sent to any server.</span>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                Get your key here
+              </a>
+            </Space>
+          )
+        }}
       >
         <Input.Password placeholder="Enter your Gemini API key" />
       </Form.Item>
@@ -47,50 +56,17 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ form }) => {
         rules={[{ required: true, message: 'Please select a model.' }]}
       >
         <Select placeholder="Select a Gemini model">
-          {/* Latest models */}
           <Option value="gemini-2.5-flash-preview-05-20">
-            <Space>
-              <ThunderboltOutlined style={{ color: '#fa8c16' }} />
-              gemini-2.5-flash-preview-05-20 (Recommended Preview)
-            </Space>
+            <Space><ThunderboltOutlined style={{ color: '#fa8c16' }} />gemini-2.5-flash-preview-05-20</Space>
           </Option>
           <Option value="gemini-2.5-flash">
-            <Space>
-              <FireOutlined style={{ color: '#fa541c' }} />
-              gemini-2.5-flash (Default Model)
-            </Space>
+            <Space><FireOutlined style={{ color: '#fa541c' }} />gemini-2.5-flash</Space>
           </Option>
           <Option value="gemini-2.5-pro">
-            <Space>
-              <RocketOutlined style={{ color: '#722ed1' }} />
-              gemini-2.5-pro (Advanced Reasoning)
-            </Space>
+            <Space><RocketOutlined style={{ color: '#722ed1' }} />gemini-2.5-pro</Space>
           </Option>
-
-          {/* Older models */}
           <Option value="gemini-2.0-flash">
-            <Space>
-              <FireOutlined style={{ color: '#fa8c16' }} />
-              gemini-2.0-flash (High Performance)
-            </Space>
-          </Option>
-          <Option value="gemini-2.0-flash-001">
-            <Space>
-              <HistoryOutlined style={{ color: '#8c8c8c' }} />
-              gemini-2.0-flash-001 (Stable Release)
-            </Space>
-          </Option>
-          <Option value="gemini-2.0-pro-exp-02-05">
-            <Space>
-              <RocketOutlined style={{ color: '#722ed1' }} />
-              gemini-2.0-pro-exp-02-05 (Experimental Pro)
-            </Space>
-          </Option>
-          <Option value="gemini-2.0-flash-thinking-exp-01-21">
-            <Space>
-              <EyeOutlined style={{ color: '#13c2c2' }} />
-              gemini-2.0-flash-thinking-exp-01-21 (Reasoning Experimental)
-            </Space>
+            <Space><FireOutlined />gemini-2.0-flash</Space>
           </Option>
         </Select>
       </Form.Item>
@@ -101,48 +77,47 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({ form }) => {
         rules={[{ required: true, message: 'Please select a theme.' }]}
       >
         <Select>
-          <Option value="light">
-            <Space><SunOutlined /> Light</Space>
-          </Option>
-          <Option value="dark">
-            <Space><MoonOutlined /> Dark</Space>
-          </Option>
-          <Option value="dark-red" >
-            <Space><FireOutlined style={{ color: '#ff4d4f' }} /> Dark Red</Space>
-          </Option>
-          <Option value="dark-blue" >
-            <Space><ThunderboltOutlined style={{ color: '#40a9ff' }} /> Dark Blue</Space>
-          </Option>
+          <Option value="system"><Space><ToolOutlined />System</Space></Option>
+          <Option value="light"><Space><SunOutlined />Light</Space></Option>
+          <Option value="dark"><Space><MoonOutlined />Dark</Space></Option>
+          <Option value="dark-red"><Space><FireOutlined style={{ color: '#ff4d4f' }} />Dark Red</Space></Option>
+          <Option value="dark-blue"><Space><ThunderboltOutlined style={{ color: '#40a9ff' }} />Dark Blue</Space></Option>
         </Select>
       </Form.Item>
     </Form>
   );
 };
 
-
-// --- 2. Popup Wrapper Component ---
-// This component uses the SettingsForm and adds the Popover and logic.
-// This is what you will import into your Toolbar.
-interface SettingsPopupProps {
-  // You can add props here if needed, e.g., onSave callback
-}
+interface SettingsPopupProps {}
 
 export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
   const [form] = Form.useForm();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const universalProvider = useUniversal();
   const { message: messageApi } = AntApp.useApp();
+  const WELCOME_COOKIE_NAME = 'er2_backend_welcome_shown';
 
-  // When the popover opens, sync the form with the latest context state.
   useEffect(() => {
-    if (isPopoverOpen) {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const populateForm = () => {
       form.setFieldsValue({
         apiKey: universalProvider.settings.apiKey,
         geminiModel: universalProvider.settings.geminiModel,
         theme: universalProvider.settings.darkMode,
       });
+    };
+    if (isPopoverOpen || isDrawerOpen) {
+      populateForm();
     }
-  }, [isPopoverOpen, universalProvider, form]);
+  }, [isPopoverOpen, isDrawerOpen]);
 
   const handleSave = () => {
     form.validateFields()
@@ -150,20 +125,37 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
         universalProvider.settings.setApiKey(values.apiKey);
         universalProvider.settings.setGeminiModel(values.geminiModel);
         universalProvider.settings.setDarkMode(values.theme);
-        messageApi.success({ content: "Settings saved successfully!" });
-        setIsPopoverOpen(false); // Close popover on successful save
+        messageApi.success("Settings saved successfully!");
+        setIsPopoverOpen(false);
+        setIsDrawerOpen(false);
       })
-      .catch(info => {
-        console.log('Validation Failed:', info);
-        // Antd form will show validation errors on the fields automatically
-      });
+      .catch(info => console.log('Validation Failed:', info));
   };
 
-  const popoverContent = (
+  const handleReset = useCallback(() => {
+    document.cookie = `${WELCOME_COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    universalProvider.settings.setApiKey('');
+    universalProvider.settings.setGeminiModel('gemini-2.5-flash');
+    universalProvider.settings.setDarkMode('light');
+    messageApi.success("Settings have been reset. Reload the page to apply changes.");
+  }, [messageApi]);
+
+  const settingsContent = (
     <div>
       <SettingsForm form={form} />
-      <div style={{ textAlign: 'right', marginTop: '16px' }}>
-        <Button onClick={() => setIsPopoverOpen(false)} style={{ marginRight: 8 }}>
+      <div style={{ textAlign: 'right', marginTop: 16 }}>
+        <Button
+          danger
+          icon={<SyncOutlined />}
+          onClick={handleReset}
+          style={{ float: 'left' }}
+        >
+          Reset
+        </Button>
+        <Button onClick={() => {
+          setIsPopoverOpen(false);
+          setIsDrawerOpen(false);
+        }} style={{ marginLeft: 8, marginRight: 8 }}>
           Cancel
         </Button>
         <Button type="primary" onClick={handleSave}>
@@ -174,15 +166,39 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
   );
 
   return (
-    <Popover
-      content={popoverContent}
-      title="Application Settings"
-      trigger="click"
-      placement="bottomLeft"
-      open={isPopoverOpen}
-      onOpenChange={setIsPopoverOpen}
-    >
-      <Button icon={<SettingOutlined />} type="dashed" />
-    </Popover>
+    <>
+      {isMobile ? (
+        <>
+          <Button
+            shape="circle"
+            icon={<SettingOutlined />}
+            type="dashed"
+            onClick={() => setIsDrawerOpen(true)}
+          />
+          <Drawer
+            title="Settings"
+            open={isDrawerOpen}
+            placement="bottom"
+            height="65%"
+            onClose={() => setIsDrawerOpen(false)}
+            styles={{ body: { padding: 16 } }}
+          >
+            {settingsContent}
+          </Drawer>
+        </>
+      ) : (
+        <Popover
+          content={settingsContent}
+          title="Application Settings"
+          trigger="click"
+          placement="bottomLeft"
+          open={isPopoverOpen}
+          onOpenChange={setIsPopoverOpen}
+          getPopupContainer={(triggerNode) => triggerNode.parentElement!}
+        >
+          <Button shape="circle" icon={<SettingOutlined />} type="dashed" />
+        </Popover>
+      )}
+    </>
   );
 };

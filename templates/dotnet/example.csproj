@@ -1,0 +1,33 @@
+<!-- templates/dotnet/example.csproj -->
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework> <!-- Or net7.0, etc. -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core ASP.NET Core framework for building web APIs -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+    
+    <!-- Entity Framework Core for data access -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    
+    <!-- EF Core provider for In-Memory database (good for getting started) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
+    
+    <!-- EF Core provider for SQL Server (example for a real database) -->
+    <!-- <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" /> -->
+
+    <!-- EF Core Tools for migrations -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    
+    <!-- Swashbuckle for Swagger/OpenAPI documentation -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+  </ItemGroup>
+
+</Project>

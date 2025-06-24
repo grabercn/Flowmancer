@@ -49,14 +49,14 @@ const WelcomeStepContent = () => (
         <Space wrap size="large" style={{ marginTop: '24px', justifyContent: 'center', width: '100%' }}>
             <Button
                 icon={<GithubOutlined />}
-                href="https://github.com/your-username/er2-backend" // TODO: Replace
+                href="https://github.com/grabercn/Flowmancer"
                 target="_blank"
             >
                 View on GitHub
             </Button>
             <Button
                 icon={<CoffeeOutlined />}
-                href="https://www.buymeacoffee.com/your-username" // TODO: Replace
+                href="https://buymeacoffee.com/grabercn" 
                 target="_blank"
             >
                 Buy me a coffee

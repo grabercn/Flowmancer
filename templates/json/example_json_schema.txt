@@ -35,14 +35,14 @@ Here is the partially completed JSON:
           }
 }
 
-💡 Base your attributes on the entity name or create a plausible default if the name is generic like 'NewEntity1'.
+Base your attributes on the entity name or create a plausible default if the name is generic like 'NewEntity1'.
 Also please ensure that the `isPrimaryKey`, `isNotNull`, `isUnique`, and `isForeignKey` fields are set appropriately based on common database design practices.
 We want to ensure that the attributes are meaningful and relevant to the entity's purpose, while also maintaining a realistic structure for a database schema.
 
 Remmeber that each schema must have a unique ID for each attribute, and the UI coordinates should remain unchanged.
 
 
-🎯 Example output:
+Example output:
 {
   "entities": [
     {
@@ -105,4 +105,8 @@ Remmeber that each schema must have a unique ID for each attribute, and the UI c
   "entityCounter": 1
 }
 
-🧠 Only fill in the `attributes` array. Do not modify the ID or UI. You may rename the entity if appropriate.
+Only fill in the `attributes` array. Do not modify the ID or UI. You may rename the entity if appropriate.
+
+User's request: {user_prompt}
+
+Generate ONLY the JSON object for the schema, without any conversational text or markdown fences.

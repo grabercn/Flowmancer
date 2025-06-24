@@ -1,37 +1,55 @@
-// frontend/src/components/EntityCard.tsx
-
 import React from 'react';
-import type { Entity } from '../types'; // Use type-only import for TS correctness
-
-// Import Ant Design components and icons
+import type { Entity } from '../types';
 import { Card, Tag } from 'antd';
 import { DatabaseOutlined, KeyOutlined, LinkOutlined } from '@ant-design/icons';
 
-// Define the props interface for the component
 interface EntityCardProps {
   entity: Entity;
   isSelected: boolean;
   onSelect: (entityId: string, e: React.MouseEvent) => void;
   onDragStart: (e: React.MouseEvent<HTMLDivElement>, entity: Entity) => void;
+  onTouchStart: (e: React.TouchEvent<HTMLDivElement>, entity: Entity) => void;
+  onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchEnd: (e: React.TouchEvent<HTMLDivElement>) => void;
 }
 
-export function EntityCard({ entity, isSelected, onSelect, onDragStart }: EntityCardProps) {
+export function EntityCard({
+  entity,
+  isSelected,
+  onSelect,
+  onDragStart,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd
+}: EntityCardProps) {
   return (
     <div
       id={entity.id}
       className="entity-card-wrapper"
       style={{
         transform: `translate(${entity.ui.x}px, ${entity.ui.y}px)`,
-        borderColor: isSelected ? '#1677ff' : undefined, // Ant Design primary color
+        borderColor: isSelected ? '#1677ff' : undefined,
+        touchAction: 'none', // IMPORTANT: prevent browser gestures
       }}
-      // Stop propagation to prevent canvas deselect, but allow selection of this card
       onClick={(e) => {
         e.stopPropagation();
         onSelect(entity.id, e);
       }}
       onMouseDown={(e) => {
-        e.stopPropagation(); // Prevent canvas-level events
+        e.stopPropagation();
         onDragStart(e, entity);
+      }}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        onTouchStart(e, entity);
+      }}
+      onTouchMove={(e) => {
+        e.stopPropagation();
+        onTouchMove(e);
+      }}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        onTouchEnd(e);
       }}
     >
       <Card
@@ -39,7 +57,7 @@ export function EntityCard({ entity, isSelected, onSelect, onDragStart }: Entity
         style={{ textAlign: 'center' }}
         title={
           <div className="entity-card-title">
-            <DatabaseOutlined style={{ marginRight: 8, color: '#595959' }}/>
+            <DatabaseOutlined style={{ marginRight: 8, color: '#595959' }} />
             <span style={{ fontWeight: 600 }}>{entity.name}</span>
           </div>
         }
