@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Form, Input, Select, Space, Button,
-  Popover, Drawer, App as AntApp
+  Popover, Drawer, App as AntApp,
+  Tooltip
 } from 'antd';
 import type { FormInstance } from 'antd';
 import { useUniversal } from '../context/UniversalProvider';
@@ -169,35 +170,40 @@ export const SettingsPopup: React.FC<SettingsPopupProps> = () => {
     <>
       {isMobile ? (
         <>
-          <Button
-            shape="circle"
-            icon={<SettingOutlined />}
-            type="dashed"
-            onClick={() => setIsDrawerOpen(true)}
-          />
-          <Drawer
-            title="Settings"
-            open={isDrawerOpen}
-            placement="bottom"
-            height="65%"
-            onClose={() => setIsDrawerOpen(false)}
-            styles={{ body: { padding: 16 } }}
-          >
-            {settingsContent}
-          </Drawer>
+          <Tooltip title="Open Settings">
+            <Button
+              shape="circle"
+              icon={<SettingOutlined />}
+              type="dashed"
+              onClick={() => setIsDrawerOpen(true)}
+            />
+            <Drawer
+              title="Settings"
+              open={isDrawerOpen}
+              placement="bottom"
+              height="65%"
+              onClose={() => setIsDrawerOpen(false)}
+              styles={{ body: { padding: 16 } }}
+            >
+              {settingsContent}
+            </Drawer>
+          </Tooltip>
         </>
       ) : (
-        <Popover
-          content={settingsContent}
-          title="Application Settings"
-          trigger="click"
-          placement="bottomLeft"
-          open={isPopoverOpen}
-          onOpenChange={setIsPopoverOpen}
-          getPopupContainer={(triggerNode) => triggerNode.parentElement!}
-        >
-          <Button shape="circle" icon={<SettingOutlined />} type="dashed" />
-        </Popover>
+        // Desktop only
+        <Tooltip title="Open Settings">
+          <Popover
+            content={settingsContent}
+            title="Application Settings"
+            trigger="click"
+            placement="bottomLeft"
+            open={isPopoverOpen}
+            onOpenChange={setIsPopoverOpen}
+            getPopupContainer={(triggerNode) => triggerNode.parentElement!}
+          >
+            <Button shape="circle" icon={<SettingOutlined />} type="dashed" />
+          </Popover>
+        </Tooltip>
       )}
     </>
   );

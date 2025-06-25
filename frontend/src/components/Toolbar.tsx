@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button, Select, Drawer, Popover, Input, Image } from 'antd';
+import { Button, Select, Drawer, Popover, Input, Image, Tooltip } from 'antd';
 import {
     PlusCircleOutlined,
     SaveOutlined,
@@ -12,6 +12,8 @@ import { SettingsPopup } from './SettingsForm';
 import { useUniversal } from '../context/UniversalProvider';
 import brandLogo from '../assets/branding/no-bg-flowmancer-brand-logo.png';
 import brandText from '../assets/branding/no-bg-flowmancer-brand-text.png';
+import { AnimateWrapper } from './AnimateWrapper';
+import { AddComponentButton } from './frontend-specific/AddComponentButton';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -20,6 +22,7 @@ interface ToolbarProps {
     targetStack: string;
     onTargetStackChange: (stack: string) => void;
     onAddEntity: () => void;
+    onAddComponent: () => void;
     onSaveDesign: () => void;
     onLoadDesign: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onGenerate: () => void;
@@ -30,6 +33,7 @@ export function Toolbar({
     targetStack,
     onTargetStackChange,
     onAddEntity,
+    onAddComponent,
     onSaveDesign,
     onLoadDesign,
     onGenerate,
@@ -93,95 +97,110 @@ export function Toolbar({
     const Actions = (
         <div className="toolbar-actions">
             <div className="toolbar-settings">
+                {/* this renders as a similar button to the one/s below, but its in its own component for simplicity */}
                 <SettingsPopup />
-            </div>
-            <div className='toolbar-settings'>
-                <Button
-                    shape="circle"
-                    type='dashed'
-                    icon={<CodeOutlined />}
-                    onClick={() => {
-                        UniversalProvider.state.setIsFrontEndMode(true);
-                        setDrawerOpen(false);
-                    }}
-                    disabled={UniversalProvider.state.isLoading}
-                />
-            </div>
-            <Button
-                icon={<PlusCircleOutlined />}
-                onClick={() => {
-                    onAddEntity();
-                    setDrawerOpen(false);
-                }}
-                disabled={UniversalProvider.state.isLoading}
-                block
-                size="large"
-            >
-                Add Entity
-            </Button>
-            <Button
-                icon={<SaveOutlined />}
-                onClick={onSaveDesign}
-                disabled={UniversalProvider.state.isLoading}
-                block
-                size="large"
-            >
-                Save Design
-            </Button>
-            <Button
-                icon={<FolderOpenOutlined />}
-                onClick={handleLoadClick}
-                disabled={UniversalProvider.state.isLoading}
-                block
-                size="large"
-            >
-                Load Design
-            </Button>
 
-            {isMobile ? (
-                <Button
-                    type="default"
-                    disabled={
-                        !UniversalProvider.settings.apiKey.trim() ||
-                        !UniversalProvider.settings.geminiModel.trim() ||
-                        UniversalProvider.state.isLoading
-                    }
-                    icon={<GoldOutlined />}
-                    block
-                    size="large"
-                    onClick={() => setAiDrawerOpen(true)}
-                >
-                    {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
-                        ? 'Generate AI Design'
-                        : 'Check Settings'}
-                </Button>
-            ) : (
-                <Popover
-                    content={aiInputUI}
-                    title="Generate Schema with AI"
-                    trigger="click"
-                    open={aiPopoverOpen}
-                    onOpenChange={setAiPopoverOpen}
-                    getPopupContainer={(triggerNode) => triggerNode.parentElement!}
-                    placement="bottom"
-                >
+                <Tooltip title="Toggle Frontend Mode">
                     <Button
-                        type="default"
-                        disabled={
-                            !UniversalProvider.settings.apiKey.trim() ||
-                            !UniversalProvider.settings.geminiModel.trim() ||
-                            UniversalProvider.state.isLoading
-                        }
-                        icon={<GoldOutlined />}
+                        shape="circle"
+                        type={UniversalProvider.state.isFrontEndMode ? 'primary' : 'dashed'}
+                        icon={<CodeOutlined />}
+                        onClick={() => {
+                            UniversalProvider.state.setIsFrontEndMode(!UniversalProvider.state.isFrontEndMode);
+                        }}
+                        disabled={UniversalProvider.state.isLoading}
+                        style={{
+                            backgroundColor: UniversalProvider.state.isFrontEndMode ? '#e6f7ff' : undefined,
+                            borderColor: UniversalProvider.state.isFrontEndMode ? '#91d5ff' : undefined,
+                            color: UniversalProvider.state.isFrontEndMode ? '#1890ff' : undefined,
+                        }}
+                    />
+                </Tooltip>
+            </div>
+
+                <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} containerClassName="in" childClassName="in">
+                    <div className='toolbar-actions'>
+                    <Button
+                        icon={<PlusCircleOutlined />}
+                        onClick={() => {
+                            onAddEntity();
+                            setDrawerOpen(false);
+                        }}
+                        disabled={UniversalProvider.state.isLoading}
                         block
                         size="large"
                     >
-                        {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
-                            ? 'Generate AI Design'
-                            : 'Check Settings'}
+                        Add Entity
                     </Button>
-                </Popover>
-            )}
+                    <Button
+                        icon={<SaveOutlined />}
+                        onClick={onSaveDesign}
+                        disabled={UniversalProvider.state.isLoading}
+                        block
+                        size="large"
+                    >
+                        Save Design
+                    </Button>
+                    <Button
+                        icon={<FolderOpenOutlined />}
+                        onClick={handleLoadClick}
+                        disabled={UniversalProvider.state.isLoading}
+                        block
+                        size="large"
+                    >
+                        Load Design
+                    </Button>
+                    {isMobile ? (
+                        <Button
+                            type="default"
+                            disabled={
+                                !UniversalProvider.settings.apiKey.trim() ||
+                                !UniversalProvider.settings.geminiModel.trim() ||
+                                UniversalProvider.state.isLoading
+                            }
+                            icon={<GoldOutlined />}
+                            block
+                            size="large"
+                            onClick={() => setAiDrawerOpen(true)}
+                        >
+                            {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
+                                ? 'Generate AI Design'
+                                : 'Check Settings'}
+                        </Button>
+                    ) : (
+                        <Popover
+                            content={aiInputUI}
+                            title="Generate Schema with AI"
+                            trigger="click"
+                            open={aiPopoverOpen}
+                            onOpenChange={setAiPopoverOpen}
+                            getPopupContainer={(triggerNode) => triggerNode.parentElement!}
+                            placement="bottom"
+                        >
+                            <Button
+                                type="default"
+                                disabled={
+                                    !UniversalProvider.settings.apiKey.trim() ||
+                                    !UniversalProvider.settings.geminiModel.trim() ||
+                                    UniversalProvider.state.isLoading
+                                }
+                                icon={<GoldOutlined />}
+                                block
+                                size="large"
+                            >
+                                {UniversalProvider.settings.apiKey.trim() && UniversalProvider.settings.geminiModel.trim()
+                                    ? 'Generate AI Design'
+                                    : 'Check Settings'}
+                            </Button>
+                        </Popover>
+                    )}
+                </div>
+            </AnimateWrapper>
+            <AnimateWrapper show={UniversalProvider.state.isFrontEndMode} containerClassName="out" childClassName="out">
+                <div className='toolbar-actions'>
+                    <AddComponentButton onAdd={onAddComponent}/>
+                </div>
+            </AnimateWrapper>
         </div>
     );
 
@@ -218,7 +237,7 @@ export function Toolbar({
                 >
                     {
                         !UniversalProvider.settings.apiKey.trim() ||
-                        !UniversalProvider.settings.geminiModel.trim()
+                            !UniversalProvider.settings.geminiModel.trim()
                             ? 'Check Settings'
                             : 'Generate Backend'
                     }

@@ -306,6 +306,13 @@ body {
   .toolbar-actions {
     flex-direction: column;
   }
+  .toolbar-settings{
+    display: flex;
+    flex-direction: row;
+    gap: 8px; /* Optional: Add spacing between icons/buttons */
+    margin-bottom: 12px; /* Optional: Space between this and next buttons */
+    align-items: center; /* Optional: vertical centering */
+  }
   .toolbar-target-stack { 
     margin-left: -10px;
   }

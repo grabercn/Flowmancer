@@ -56,6 +56,7 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
 
   // Loading state
   const [isLoading, setIsLoadingState] = useState<boolean>(false);
+  const [isFrontEndMode, setIsFrontEndModeState] = useState<boolean>(false)
 
   // Initialize darkMode to system if empty
   useEffect(() => {
@@ -87,12 +88,10 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const state: State = {
-    isFrontEndMode: false,
+    isFrontEndMode,
     isLoading,
     setIsLoading: setIsLoadingState,
-    setIsFrontEndMode: (value: boolean) => {
-      state.isFrontEndMode = value;
-    },
+    setIsFrontEndMode: setIsFrontEndModeState,
   };
 
   return (

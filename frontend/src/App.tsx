@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
 
 import React, { useState, useRef, useCallback, type ChangeEvent } from 'react';
-import { App as AntApp } from 'antd';
+import { App as AntApp, message } from 'antd';
 
 // Custom Components
 import { Toolbar } from './components/Toolbar';
@@ -310,6 +310,11 @@ function SchemaDesigner() {
     return confettiInstance;
   };
 
+  // -- Component Handlers -- (Front end designer)
+  const handleAddComponent = () => {
+    messageApi.info('This feature is not implemented yet.');
+  }
+
   return (
     <div className="app-container">
 
@@ -319,6 +324,7 @@ function SchemaDesigner() {
         targetStack={targetStack}
         onTargetStackChange={setTargetStack}
         onAddEntity={handleAddEntity}
+        onAddComponent={handleAddComponent}
         onSaveDesign={handleSaveDesign}
         onLoadDesign={handleLoadDesign}
         onGenerate={handleGenerateCode}
