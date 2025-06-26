@@ -14,6 +14,7 @@ import brandLogo from '../assets/branding/no-bg-flowmancer-brand-logo.png';
 import brandText from '../assets/branding/no-bg-flowmancer-brand-text.png';
 import { AnimateWrapper } from './AnimateWrapper';
 import { AddComponentButton } from './frontend-specific/AddComponentButton';
+import { SummaryForm } from './SummaryForm';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -55,11 +56,6 @@ export function Toolbar({
         return () => window.removeEventListener('resize', updateDevice);
     }, []);
 
-    const handleLoadClick = () => {
-        fileInputRef.current?.click();
-        setDrawerOpen(false);
-    };
-
     const handleAIGenerate = () => {
         onGenerateAIDesign(aiPrompt);
         setAiPopoverOpen(false);
@@ -100,6 +96,12 @@ export function Toolbar({
                 {/* this renders as a similar button to the one/s below, but its in its own component for simplicity */}
                 <SettingsPopup />
 
+                {/* this renders also as a button */}
+                <SummaryForm initialSummary={UniversalProvider.data.backendSummary} />
+
+                {console.log({ UniversalProvider })}
+
+                {/* render in the frontend toggle button */}
                 <Tooltip title="Toggle Frontend Mode">
                     <Button
                         shape="circle"
@@ -116,6 +118,8 @@ export function Toolbar({
                         }}
                     />
                 </Tooltip>
+
+                
             </div>
 
                 <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} containerClassName="in" childClassName="in">
@@ -143,7 +147,7 @@ export function Toolbar({
                     </Button>
                     <Button
                         icon={<FolderOpenOutlined />}
-                        onClick={handleLoadClick}
+                        onClick={() => fileInputRef.current?.click()}
                         disabled={UniversalProvider.state.isLoading}
                         block
                         size="large"
@@ -253,7 +257,7 @@ export function Toolbar({
                 ref={fileInputRef}
                 onChange={onLoadDesign}
                 style={{ display: 'none' }}
-                accept=".json"
+                accept=".flowmancer"
             />
 
             <Drawer

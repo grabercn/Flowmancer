@@ -7,11 +7,14 @@ const setCookie = (name: string, value: string, days = 365) => {
 };
 
 const getCookie = (name: string) => {
-  return document.cookie
+  const raw = document.cookie
     .split('; ')
     .find(row => row.startsWith(name + '='))
     ?.split('=')[1];
+
+  return raw ? decodeURIComponent(raw) : undefined;
 };
+
 
 // Types for grouped context
 type Brand = {
@@ -35,10 +38,16 @@ type State = {
   setIsFrontEndMode: (value: boolean) => void;
 };
 
+type Data = {
+  backendSummary: string;
+  setBackendSummary: (value: string) => void;
+};
+
 type UniversalContextType = {
   brand: Brand;
   settings: Settings;
   state: State;
+  data: Data;
 };
 
 const UniversalContext = createContext<UniversalContextType | undefined>(undefined);
@@ -56,8 +65,10 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
 
   // Loading state
   const [isLoading, setIsLoadingState] = useState<boolean>(false);
-  const [isFrontEndMode, setIsFrontEndModeState] = useState<boolean>(false)
+  const [isFrontEndMode, setIsFrontEndModeState] = useState<boolean>(() => getCookie('isFrontEndMode') === 'true')
 
+  // Data state
+  const [backendSummary, setBackendSummary] = useState<string>('')
   // Initialize darkMode to system if empty
   useEffect(() => {
     if (!darkMode) {
@@ -66,16 +77,13 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Persist settings to cookies
+  // Consolidate cookie setting into one useEffect
   useEffect(() => {
     setCookie('darkMode', darkMode);
-  }, [darkMode]);
-  useEffect(() => {
     setCookie('apiKey', apiKey);
-  }, [apiKey]);
-  useEffect(() => {
     setCookie('geminiModel', geminiModel);
-  }, [geminiModel]);
+    setCookie('isFrontEndMode', isFrontEndMode.toString());
+  }, [darkMode, apiKey, geminiModel, isFrontEndMode]);
 
   // Wrapped setters
   const settings: Settings = {
@@ -94,8 +102,13 @@ export const UniversalProvider = ({ children }: { children: ReactNode }) => {
     setIsFrontEndMode: setIsFrontEndModeState,
   };
 
+  const data: Data = {
+    backendSummary,
+    setBackendSummary,
+  };
+
   return (
-    <UniversalContext.Provider value={{ brand, settings, state }}>
+    <UniversalContext.Provider value={{ brand, settings, state, data }}>
       {children}
     </UniversalContext.Provider>
   );
@@ -111,5 +124,6 @@ export const useUniversal = () => {
     brand: context.brand,
     settings: context.settings,
     state: context.state,
+    data: context.data,
   };
 };

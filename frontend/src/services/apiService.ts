@@ -1,6 +1,6 @@
 // frontend/src/services/apiService.ts
 
-import type { Entity, Relationship, ApiSchema } from '../types';
+import type { Entity, Relationship, ApiSchema, BackendSummary } from '../types';
 
 // The API prefix defined in your FastAPI backend (engine.py)
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -112,7 +112,9 @@ export async function askGeminiForDesign(prompt: string, geminiApiKey: string, g
  * @returns An object containing the download URL for the generated ZIP file.
  * @throws An error with a user-friendly message if the API call fails.
  */
-export async function generateBackendCode(entities: Entity[], targetStack: string, geminiApiKey: string, geminiModel: string): Promise<{ download_url: string }> {
+export async function generateBackendCode(entities: Entity[], targetStack: string, geminiApiKey: string, geminiModel: string): Promise<{
+  summary: BackendSummary; download_url: string; message: string; 
+}> {
   const apiEntities = prepareEntitiesForApi(entities);
   const relationships = deriveRelationshipsFromFks(entities);
 

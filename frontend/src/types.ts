@@ -46,6 +46,22 @@ export interface Relationship {
 }
 
 /**
+ * Defines the structure for the backend summary, which includes generated API endpoints
+ * and data types. This is typically returned by the backend after code generation.
+ */
+export interface BackendSummary {
+  endpoints: {
+    method: string;
+    path: string;
+    description: string;
+  }[];
+  types: {
+    typeName: string;
+    description: string;
+  }[];
+}
+
+/**
  * This represents the complete schema payload that will be sent to the backend API.
  * It matches the Pydantic model (`FullSchema`) in the FastAPI backend.
  * UI-specific properties like `id`, `x`, `y` are stripped out.
@@ -74,4 +90,21 @@ export interface ApiSchema {
 export interface DesignData {
     entities: Entity[];
     entityCounter: number;
+}
+
+/**
+ *  * Defines the structure for the data saved by Flowmancer, including both
+ * the design data and the backend summary. This is the top-level structure
+ * for the JSON file that Flowmancer will export and import.
+ */
+export interface FlowmancerSaveData {
+  type: 'flowmancer';
+  version: string; // e.g., '1.0'
+  savedAt: string; // ISO timestamp
+  backendSummary: string;
+  frontendSchema?: any; // optional, to be filled in later
+  designData: {
+    entities: Entity[];
+    entityCounter: number;
+  };
 }

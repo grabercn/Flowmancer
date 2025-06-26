@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
 
 import React, { useState, useRef, useCallback, type ChangeEvent } from 'react';
-import { App as AntApp, message } from 'antd';
+import { App as AntApp } from 'antd';
 
 // Custom Components
 import { Toolbar } from './components/Toolbar';
@@ -20,6 +20,8 @@ import { PlusCircleOutlined } from '@ant-design/icons';
 import WelcomeScreen from './components/WelcomeScreen';
 import confetti from 'canvas-confetti';
 import { encryptApiKey } from './utils/cryptoUtils';
+import { parseBackendSummary } from './utils/parseBackendSummary';
+import { loadFlowmancerFile, saveFlowmancerFile } from './utils/handleFlowmancerFile';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
@@ -180,7 +182,9 @@ function SchemaDesigner() {
       UniversalProvider.state.setIsLoading(false);
       messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 3 });
       await new Promise(resolve => setTimeout(resolve, 3000));
-      window.location.href = result.download_url; // Trigger download
+      //window.location.href = result.download_url; // Trigger download
+      console.log(result.summary)
+      UniversalProvider.data.setBackendSummary(parseBackendSummary(result.summary))
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       messageApi.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
@@ -190,58 +194,47 @@ function SchemaDesigner() {
   };
 
   const handleSaveDesign = () => {
-    if (entities.length === 0) {
-      messageApi.info('Nothing to save.');
-      return;
-    }
-    const designData: DesignData = { entities, entityCounter };
-    const dataStr = JSON.stringify(designData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'db_schema_design.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    messageApi.success('Design saved!');
+    saveFlowmancerFile({
+      entities,
+      entityCounter,
+      backendSummary: UniversalProvider.data.backendSummary,
+      frontendSchema: undefined, // or include real schema here when ready
+    });
   };
 
-  const handleLoadDesign = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleLoadDesign = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const result = e.target?.result;
-        if (typeof result !== 'string') throw new Error("File could not be read.");
-        const designData: DesignData = JSON.parse(result);
-        if (designData && Array.isArray(designData.entities)) {
-          setEntities(designData.entities);
-          setEntityCounter(designData.entityCounter || designData.entities.length);
-          setSelectedEntityId(null);
-          messageApi.success('Design loaded successfully!');
-        } else {
-          throw new Error("Invalid schema file format.");
-        }
-      } catch (err) {
-        messageApi.error(err instanceof Error ? err.message : "Failed to parse file.");
-      } finally {
-        if (event.target) event.target.value = '';
+    try {
+      const parsed = await loadFlowmancerFile(file);
+
+      setEntities(parsed.designData.entities);
+      setEntityCounter(parsed.designData.entityCounter || parsed.designData.entities.length);
+      setSelectedEntityId(null);
+
+      if (parsed.backendSummary) {
+        UniversalProvider.data.setBackendSummary(parsed.backendSummary);
       }
-    };
-    reader.readAsText(file);
+
+      // Optionally handle frontendSchema
+      // if (parsed.frontendSchema) { ... }
+
+      messageApi.success('Flowmancer project loaded!');
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : 'Failed to load file.');
+    } finally {
+      event.target.value = '';
+    }
   };
+
 
   const handleSendDesignPrompt = async (designPrompt: string) => {
     // Call the AI design generation function
     // Assuming askGeminiForDesign returns a promise that resolves to the JSON object
     messageApi.loading({ content: 'Generating design with AI...', key: 'ai-design', duration: 0 });
     if (!designPrompt || designPrompt.trim() === '') {
-      messageApi.error({ content: "Design prompt cannot be empty.", key: 'ai-design'});
+      messageApi.error({ content: "Design prompt cannot be empty.", key: 'ai-design' });
       return;
     }
 
@@ -256,7 +249,7 @@ function SchemaDesigner() {
         const incomingEntities = response.entities;
 
         if (!incomingEntities || !Array.isArray(incomingEntities)) {
-          messageApi.error({ content: "Invalid AI response format.", key: 'ai-design'});
+          messageApi.error({ content: "Invalid AI response format.", key: 'ai-design' });
           throw new Error("Invalid or missing 'entities' array in AI response.");
         }
 
@@ -278,28 +271,28 @@ function SchemaDesigner() {
         setEntities(hydratedEntities);
         setEntityCounter(hydratedEntities.length);
         setSelectedEntityId(null); // Deselect any currently selected entity
-        
+
         fireConfetti();
-        messageApi.success({content: "AI design generated successfully!", key: 'ai-design'});
+        messageApi.success({ content: "AI design generated successfully!", key: 'ai-design' });
       })
       .catch(error => {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        messageApi.error({ content: `AI design generation failed: ${errorMessage}`, key: 'ai-design'});
+        messageApi.error({ content: `AI design generation failed: ${errorMessage}`, key: 'ai-design' });
       })
       .finally(() => {
         UniversalProvider.state.setIsLoading(false);
       });
   }
-  
+
   // --- EFFECTS ---
 
-   // misc Confetti handler to fire confetti
+  // misc Confetti handler to fire confetti
   const fireConfetti = (particleCount?: number, spread?: number, origin?: any) => {
-      const confettiInstance = confetti({
-          particleCount: particleCount || 100,
-          spread: spread || 70,
-          origin: origin || { y: 0.6 },
-  })
+    const confettiInstance = confetti({
+      particleCount: particleCount || 100,
+      spread: spread || 70,
+      origin: origin || { y: 0.6 },
+    })
     // bump z Index
     const canvas = document.querySelector('canvas');
     if (canvas) {
@@ -318,7 +311,7 @@ function SchemaDesigner() {
   return (
     <div className="app-container">
 
-      <WelcomeScreen /> 
+      <WelcomeScreen />
 
       <Toolbar
         targetStack={targetStack}
