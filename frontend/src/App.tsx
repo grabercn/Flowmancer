@@ -15,7 +15,7 @@ import { useEntityDrag } from './hooks/useEntityDrag';
 
 // API Service and Types
 import { askGeminiForDesign, generateBackendCode } from './services/apiService';
-import type { Entity, Attribute, FlowmancerSaveData } from './types';
+import type { Entity, Attribute } from './types';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import WelcomeScreen from './components/WelcomeScreen';
 import confetti from 'canvas-confetti';
@@ -25,7 +25,6 @@ import { loadFlowmancerFile, saveFlowmancerFile } from './utils/handleFlowmancer
 import { GenerationResultModal } from './components/GenerationResultModal';
 import { FrontendDesignerMain } from './components/frontend-designer/FrontEndDesignerMain';
 import type { ComponentDefinition } from './components/frontend-designer/componentDefinitions';
-import { AnimateWrapper } from './components/AnimateWrapper';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
@@ -271,6 +270,10 @@ function SchemaDesigner() {
             componentCounter: componentCounter,
         },
     };
+    if (dataToSave.entities.length === 0 && dataToSave.frontendSchema.components.length === 0) {
+      messageApi.warning("No changes to save. Add entities or components to continue.")
+      return;
+    }
     saveFlowmancerFile(fileName, dataToSave);
   };
 

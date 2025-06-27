@@ -148,6 +148,27 @@ export function Toolbar({
         </div>
     );
 
+    const SettingsActions = (
+        <div className="toolbar-settings">
+            <SettingsPopup />
+            <SummaryForm initialSummary={UniversalProvider.data.backendSummary} />
+            <Tooltip title="Toggle Frontend Mode">
+                <Button
+                    shape="circle"
+                    type={UniversalProvider.state.isFrontEndMode ? 'primary' : 'dashed'}
+                    icon={<CodeOutlined />}
+                    onClick={() => UniversalProvider.state.setIsFrontEndMode(!UniversalProvider.state.isFrontEndMode)}
+                    disabled={UniversalProvider.state.isLoading}
+                    style={{
+                        backgroundColor: UniversalProvider.state.isFrontEndMode ? '#e6f7ff' : undefined,
+                        borderColor: UniversalProvider.state.isFrontEndMode ? '#91d5ff' : undefined,
+                        color: UniversalProvider.state.isFrontEndMode ? '#1890ff' : undefined,
+                    }}
+                />
+            </Tooltip>
+        </div>
+    );
+
     return (
         <header className="app-toolbar">
             <div className="toolbar-section-left" style={{ filter: UniversalProvider.settings.darkMode.includes('dark') ? 'brightness(0) invert(1)' : 'none' }}>
@@ -156,24 +177,13 @@ export function Toolbar({
             </div>
 
             <nav className="toolbar-section-center desktop-only">
-                <div className="toolbar-settings">
-                    <SettingsPopup />
-                    <SummaryForm initialSummary={UniversalProvider.data.backendSummary} />
-                    <Tooltip title="Toggle Frontend Mode">
-                        <Button
-                            shape="circle"
-                            type={UniversalProvider.state.isFrontEndMode ? 'primary' : 'dashed'}
-                            icon={<CodeOutlined />}
-                            onClick={() => UniversalProvider.state.setIsFrontEndMode(!UniversalProvider.state.isFrontEndMode)}
-                            disabled={UniversalProvider.state.isLoading}
-                            style={{
-                                backgroundColor: UniversalProvider.state.isFrontEndMode ? '#e6f7ff' : undefined,
-                                borderColor: UniversalProvider.state.isFrontEndMode ? '#91d5ff' : undefined,
-                                color: UniversalProvider.state.isFrontEndMode ? '#1890ff' : undefined,
-                            }}
-                        />
-                    </Tooltip>
-                </div>
+                <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} containerClassName="in" childClassName="in" animation='zoom'>
+                    {SettingsActions}
+                </AnimateWrapper>
+
+                <AnimateWrapper show={UniversalProvider.state.isFrontEndMode} containerClassName="out" childClassName="out" animation='zoom'>
+                    {SettingsActions}
+                </AnimateWrapper>
 
                 <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} containerClassName="in" childClassName="in">
                     {BackendActions}
@@ -229,7 +239,23 @@ export function Toolbar({
                         <Image src={brandText} width={100} preview={false} />
                     </div>
                 </div>
-                {UniversalProvider.state.isFrontEndMode ? FrontendActions : BackendActions}
+
+                <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} containerClassName="in" childClassName="in" animation='zoom'>
+                    {SettingsActions}
+                </AnimateWrapper>
+
+                <AnimateWrapper show={UniversalProvider.state.isFrontEndMode} containerClassName="out" childClassName="out" animation='zoom'>
+                    {SettingsActions}
+                </AnimateWrapper>
+
+                <AnimateWrapper show={!UniversalProvider.state.isFrontEndMode} animation="slide-left" containerClassName="in" childClassName="in">
+                    {BackendActions}
+                </AnimateWrapper>
+                
+                <AnimateWrapper show={UniversalProvider.state.isFrontEndMode} animation="slide-left" containerClassName="out" childClassName="out">
+                    {FrontendActions}
+                </AnimateWrapper>
+
             </Drawer>
 
             <Drawer title="Generate Schema with AI" placement="bottom" onClose={() => setAiDrawerOpen(false)} open={aiDrawerOpen} height="40%" styles={{ body: { padding: 16 } }}>
