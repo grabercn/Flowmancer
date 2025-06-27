@@ -15,7 +15,7 @@ try:
     from generators.fastapi_generator import generate_fastapi_project
     from generators.springboot_generator import generate_springboot_project
     from generators.dotnet_generator import generate_dotnet_project
-    from parser.crypto_utils import decrypt_api_key
+    from parser.crypto_utils import decrypt_api_key # type: ignore
 except ImportError as e:
     logging.critical(f"Could not import one or more project generators: {e}")
     # Define placeholders so the app can still start and report errors gracefully.
@@ -104,7 +104,6 @@ async def generate_full_project_route(request: Request, payload: GenerateRequest
         generated_project_path, generation_summary = generation_result
         
         logger.info(f"API Route: Generator for '{target_stack}' completed. Project source at: {generated_project_path}")
-        logger.info(f"API Route: Generation summary: {json.dumps(generation_summary, indent=2)}")
         
         # Save the generation summary to a file within the generated project directory
         summary_file_path = generated_project_path / "generation_summary.json"

@@ -23,15 +23,19 @@ export interface Attribute {
  * Defines the structure for a single database entity (a table), including its
  * position on the canvas for UI state.
  */
+// Represents a backend database entity OR a frontend UI component
 export interface Entity {
-  id: string; // A unique client-side ID.
+  id: string;
   name: string;
-  description?: string; // Optional description for the entity.
   attributes: Attribute[];
   ui: {
-    x: number; // UI position x-coordinate.
-    y: number; // UI position y-coordinate.
+    x: number;
+    y: number;
   };
+  // Optional properties for frontend components
+  componentType?: string; // e.g., 'button', 'card'
+  props?: { [key: string]: any };
+  backendDescription?: string; // Instructions for AI code generation
 }
 
 /**
@@ -92,19 +96,31 @@ export interface DesignData {
     entityCounter: number;
 }
 
+/*
+ * Defines the structure for the frontend design, including all components
+ * and the counter for generating new component names.
+ */
+export interface FrontendSchema {
+  components: Entity[];
+  componentCounter: number;
+}
+
 /**
- *  * Defines the structure for the data saved by Flowmancer, including both
- * the design data and the backend summary. This is the top-level structure
- * for the JSON file that Flowmancer will export and import.
+ * Defines the structure for the complete design data that can be saved/loaded
+ * from a .flowmancer file, preserving the entire UI and data state.
  */
 export interface FlowmancerSaveData {
   type: 'flowmancer';
-  version: string; // e.g., '1.0'
+  version: string; // e.g., '1.1'
   savedAt: string; // ISO timestamp
-  backendSummary: string;
-  frontendSchema?: any; // optional, to be filled in later
+  
+  // Backend Design Data
   designData: {
     entities: Entity[];
     entityCounter: number;
   };
+  backendSummary: string;
+  
+  // Frontend Design Data (Optional) 
+  frontendSchema?: FrontendSchema;
 }

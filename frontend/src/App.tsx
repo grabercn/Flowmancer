@@ -1,7 +1,7 @@
 // frontend/src/App.tsx
 
-import React, { useState, useRef, useCallback, type ChangeEvent } from 'react';
-import { App as AntApp } from 'antd';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { App as AntApp, message } from 'antd';
 
 // Custom Components
 import { Toolbar } from './components/Toolbar';
@@ -15,22 +15,36 @@ import { useEntityDrag } from './hooks/useEntityDrag';
 
 // API Service and Types
 import { askGeminiForDesign, generateBackendCode } from './services/apiService';
-import type { Entity, Attribute, DesignData } from './types';
+import type { Entity, Attribute, FlowmancerSaveData } from './types';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import WelcomeScreen from './components/WelcomeScreen';
 import confetti from 'canvas-confetti';
 import { encryptApiKey } from './utils/cryptoUtils';
 import { parseBackendSummary } from './utils/parseBackendSummary';
 import { loadFlowmancerFile, saveFlowmancerFile } from './utils/handleFlowmancerFile';
+import { GenerationResultModal } from './components/GenerationResultModal';
+import { FrontendDesignerMain } from './components/frontend-designer/FrontEndDesignerMain';
+import type { ComponentDefinition } from './components/frontend-designer/componentDefinitions';
+import { AnimateWrapper } from './components/AnimateWrapper';
 
 function SchemaDesigner() {
   // --- STATE MANAGEMENT ---
   const [entities, setEntities] = useState<Entity[]>([]);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [entityCounter, setEntityCounter] = useState<number>(0);
+  const [backendSummary, setBackendSummary] = useState('');
+  const [generateResult, setGenerateResult] = useState<any>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
   const [editingAttribute, setEditingAttribute] = useState<Attribute | null>(null);
+
+  // New state for frontend components (reusing the Entity type for simplicity)
+  const [uiComponents, setUiComponents] = useState<Entity[]>([]);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  const [componentCounter, setComponentCounter] = useState<number>(0);
+  const frontendDrag = useEntityDrag(setUiComponents);
+
 
   const [targetStack, setTargetStack] = useState<string>('fastapi');
   const UniversalProvider = useUniversal();
@@ -46,7 +60,53 @@ function SchemaDesigner() {
 
   // --- HANDLER FUNCTIONS ---
 
-  // Entity Handlers
+  // --- COMPONENT HANDLERS (FRONTEND) ---
+  const handleAddComponent = useCallback((definition: ComponentDefinition) => {
+    const nextCounter = componentCounter + 1;
+    const newComponent: Entity = {
+        id: `component-${Date.now()}`,
+        name: `${definition.label}${nextCounter}`,
+        attributes: [],
+        componentType: definition.key,
+        props: { ...definition.defaultProps },
+        ui: {
+            x: 100 + ((uiComponents.length % 5) * 70),
+            y: 100 + (Math.floor(uiComponents.length / 5) * 70),
+        },
+    };
+    setUiComponents(prev => [...prev, newComponent]);
+    setSelectedComponentId(newComponent.id);
+    setComponentCounter(nextCounter);
+    messageApi.success(`Added ${definition.label} component`);
+  }, [componentCounter, uiComponents.length, messageApi]);
+
+  const handleSelectComponent = useCallback((componentId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedComponentId(componentId);
+  }, []);
+
+  const handleUpdateComponentProps = useCallback((componentId: string, newProps: any) => {
+      setUiComponents(prev => prev.map(c =>
+        c.id === componentId ? { ...c, props: newProps } : c
+      ));
+  }, []);
+
+  const handleUpdateComponentName = useCallback((componentId: string, newName: string) => {
+    setUiComponents(prev => prev.map(c =>
+      c.id === componentId ? { ...c, name: newName } : c
+    ));
+  }, []);
+
+  const handleDeleteComponent = useCallback((componentId: string) => {
+      const componentName = uiComponents.find(c => c.id === componentId)?.name;
+      setUiComponents(prev => prev.filter(c => c.id !== componentId));
+      if (selectedComponentId === componentId) {
+          setSelectedComponentId(null);
+      }
+      messageApi.success(`Component "${componentName}" deleted.`);
+  }, [uiComponents, selectedComponentId, messageApi]);
+
+  // --- ENTITY HANDLERS (BACKEND) ---
   const handleAddEntity = () => {
     const nextCounter = entityCounter + 1;
     const newEntity: Entity = {
@@ -172,34 +232,46 @@ function SchemaDesigner() {
     const geminiApiKey = encryptApiKey(UniversalProvider.settings.apiKey);
     const geminiModel = UniversalProvider.settings.geminiModel;
 
-    UniversalProvider.state.setIsLoading(true); // will disable generate buttons if loading already
+    UniversalProvider.state.setIsLoading(true);
 
-    const key = 'generate';
-    messageApi.loading({ content: 'Generating code... This may take several minutes!', key, duration: 0 });
+    const loadingKey = 'generate';
+    messageApi.loading({ content: 'Generating code... This may take several minutes!', key: loadingKey, duration: 0 });
+
     try {
       const result = await generateBackendCode(entities, targetStack, geminiApiKey, geminiModel);
       fireConfetti();
-      UniversalProvider.state.setIsLoading(false);
-      messageApi.success({ content: 'Code generated successfully! Starting download...', key, duration: 3 });
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      //window.location.href = result.download_url; // Trigger download
-      console.log(result.summary)
-      UniversalProvider.data.setBackendSummary(parseBackendSummary(result.summary))
+
+      // Parse and store the backend summary
+      const parsedSummary = parseBackendSummary(result.download_url, result.summary);
+      UniversalProvider.data.setBackendSummary(parsedSummary);
+      setBackendSummary(parsedSummary); // local state for saving helper
+
+      // Store generation result & open the popover for download/save
+      setGenerateResult(result);
+      setPopoverOpen(true);
+
+      messageApi.success({ content: 'Code generated successfully! Use the buttons to download or save.', key: loadingKey, duration: 3 });
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      messageApi.error({ content: `Generation failed: ${errorMessage}`, key, duration: 5 });
+      messageApi.error({ content: `Generation failed: ${errorMessage}`, key: loadingKey, duration: 5 });
     } finally {
       UniversalProvider.state.setIsLoading(false);
     }
   };
 
-  const handleSaveDesign = () => {
-    saveFlowmancerFile({
-      entities,
-      entityCounter,
-      backendSummary: UniversalProvider.data.backendSummary,
-      frontendSchema: undefined, // or include real schema here when ready
-    });
+  const handleSaveDesign = (fileName: string = 'project', currentBackendSummary?: string) => {
+    // This payload now correctly matches the structure expected by the saveFlowmancerFile utility
+    const dataToSave = {
+        entities: entities,
+        entityCounter: entityCounter,
+        backendSummary: currentBackendSummary || backendSummary,
+        frontendSchema: {
+            components: uiComponents,
+            componentCounter: componentCounter,
+        },
+    };
+    saveFlowmancerFile(fileName, dataToSave);
   };
 
   const handleLoadDesign = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,24 +279,32 @@ function SchemaDesigner() {
     if (!file) return;
 
     try {
-      const parsed = await loadFlowmancerFile(file);
+        const parsed = await loadFlowmancerFile(file);
 
-      setEntities(parsed.designData.entities);
-      setEntityCounter(parsed.designData.entityCounter || parsed.designData.entities.length);
-      setSelectedEntityId(null);
+        // Load Backend Data
+        setEntities(parsed.designData.entities || []);
+        setEntityCounter(parsed.designData.entityCounter || 0);
+        setBackendSummary(parsed.backendSummary || '');
+        UniversalProvider.data.setBackendSummary(parsed.backendSummary || '');
+        
+        // Load Frontend Data if it exists
+        if (parsed.frontendSchema) {
+            setUiComponents(parsed.frontendSchema.components || []);
+            setComponentCounter(parsed.frontendSchema.componentCounter || 0);
+        } else {
+            // Reset frontend state if loading an older file without it
+            setUiComponents([]);
+            setComponentCounter(0);
+        }
 
-      if (parsed.backendSummary) {
-        UniversalProvider.data.setBackendSummary(parsed.backendSummary);
-      }
+        setSelectedEntityId(null);
+        setSelectedComponentId(null);
 
-      // Optionally handle frontendSchema
-      // if (parsed.frontendSchema) { ... }
-
-      messageApi.success('Flowmancer project loaded!');
+        messageApi.success('Flowmancer project loaded!');
     } catch (err) {
-      messageApi.error(err instanceof Error ? err.message : 'Failed to load file.');
+        messageApi.error(err instanceof Error ? err.message : 'Failed to load file.');
     } finally {
-      event.target.value = '';
+        event.target.value = '';
     }
   };
 
@@ -265,8 +345,6 @@ function SchemaDesigner() {
           };
         });
 
-        console.log("Hydrated Entities:", hydratedEntities);
-
         // Clear existing entities and set the new, hydrated design
         setEntities(hydratedEntities);
         setEntityCounter(hydratedEntities.length);
@@ -283,6 +361,17 @@ function SchemaDesigner() {
         UniversalProvider.state.setIsLoading(false);
       });
   }
+
+  // Set target stack (and other default settings in the future) when switching modes
+  useEffect(() => {
+    if (UniversalProvider.state.isFrontEndMode) {
+      setTargetStack('react'); // default frontend stack
+      messageApi.warning("Frontend mode is in beta. Expect bugs and missing features!");      
+    } else {
+      setTargetStack('fastapi'); // default backend stack
+    }
+  }, [UniversalProvider.state.isFrontEndMode]);
+
 
   // --- EFFECTS ---
 
@@ -303,11 +392,6 @@ function SchemaDesigner() {
     return confettiInstance;
   };
 
-  // -- Component Handlers -- (Front end designer)
-  const handleAddComponent = () => {
-    messageApi.info('This feature is not implemented yet.');
-  }
-
   return (
     <div className="app-container">
 
@@ -316,54 +400,91 @@ function SchemaDesigner() {
       <Toolbar
         targetStack={targetStack}
         onTargetStackChange={setTargetStack}
-        onAddEntity={handleAddEntity}
+        onAddEntity={handleAddEntity} // This is for backend entities
         onAddComponent={handleAddComponent}
         onSaveDesign={handleSaveDesign}
         onLoadDesign={handleLoadDesign}
         onGenerate={handleGenerateCode}
         onGenerateAIDesign={handleSendDesignPrompt}
       />
-
-      <main
-        className="main-content"
-        onMouseMove={handleDragMove}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div ref={canvasWrapperRef} className="canvas-area">
-          <div className="canvas-area-inner" style={{ cursor: isDragging ? 'grabbing' : 'default' }}>
-            {entities.map(entity => (
-              <EntityCard
-                key={entity.id}
-                entity={entity}
-                isSelected={entity.id === selectedEntityId}
-                onSelect={handleSelectEntity}
-                onDragStart={handleDragStart}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-              />
-            ))}
-            {entities.length === 0 && (
-              <div className="canvas-placeholder-container">
-                <PlusCircleOutlined className="canvas-placeholder" />
-                <p className="canvas-placeholder">Click "Add Entity" to begin</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <PropertiesPanel
-          selectedEntity={selectedEntity}
-          onUpdateEntityName={handleUpdateEntityName}
-          onDeleteEntity={handleDeleteEntity}
-          onAddAttribute={handleOpenAttributeModal}
-          onEditAttribute={handleOpenAttributeModal}
-          onDeleteAttribute={handleDeleteAttribute}
+      {UniversalProvider.state.isFrontEndMode ? (
+        <FrontendDesignerMain
+          components={uiComponents}
+          selectedComponentId={selectedComponentId}
+          onSelectComponent={handleSelectComponent}
+          onDragStart={frontendDrag.handleDragStart as any}
+          onTouchStart={frontendDrag.handleTouchStart as any}
+          onTouchMove={frontendDrag.handleTouchMove as any}
+          onTouchEnd={frontendDrag.handleTouchEnd as any}
+          onDragMove={frontendDrag.handleDragMove as any}
+          onDragEnd={frontendDrag.handleDragEnd as any} 
+          isDragging={frontendDrag.isDragging}
+          selectedComponent={uiComponents.find(c => c.id === selectedComponentId) || null}
+          onUpdateComponentName={handleUpdateComponentName}
+          onUpdateComponentProps={handleUpdateComponentProps}
+          onDeleteComponent={handleDeleteComponent}
+          canvasWrapperRef={canvasWrapperRef as React.RefObject<HTMLDivElement>}
         />
-      </main>
+      ) : (
+        <main
+          className="main-content"
+          onMouseMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div ref={canvasWrapperRef} className="canvas-area">
+            <div className="canvas-area-inner" style={{ cursor: isDragging ? 'grabbing' : 'default' }}>
+              {entities.map(entity => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  isSelected={entity.id === selectedEntityId}
+                  onSelect={handleSelectEntity}
+                  onDragStart={handleDragStart}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                />
+              ))}
+              {entities.length === 0 && (
+                <div className="canvas-placeholder-container">
+                  <PlusCircleOutlined className="canvas-placeholder" />
+                  <p className="canvas-placeholder">Click "Add Entity" to begin</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <PropertiesPanel
+            selectedEntity={selectedEntity}
+            onUpdateEntityName={handleUpdateEntityName}
+            onDeleteEntity={handleDeleteEntity}
+            onAddAttribute={handleOpenAttributeModal}
+            onEditAttribute={handleOpenAttributeModal}
+            onDeleteAttribute={handleDeleteAttribute}
+          />
+        </main>
+      )}
+
+      <GenerationResultModal
+        open={popoverOpen}
+        onClose={() => {
+          setGenerateResult(null);
+          setPopoverOpen(false);
+        }}
+        resultDownloadUrl={generateResult?.download_url || ''}
+        parsedSummary={backendSummary}
+        onSaveFlowmancer={(projectName: string | undefined, summary: string | undefined) => {
+          handleSaveDesign(projectName, summary);
+          messageApi.success('.flowmancer file saved!');
+        }}
+        disabled={
+          !UniversalProvider.settings.apiKey.trim() ||
+          !UniversalProvider.settings.geminiModel.trim() ||
+          UniversalProvider.state.isLoading
+        }
+      />
 
       {isAttributeModalOpen && selectedEntity && (
         <AttributeEditorModal
@@ -376,6 +497,7 @@ function SchemaDesigner() {
           currentEntityName={selectedEntity.name}
         />
       )}
+
     </div>
   );
 }

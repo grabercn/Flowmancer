@@ -2,6 +2,7 @@ import { message } from 'antd';
 import type { FlowmancerSaveData } from '../types';
 
 export const saveFlowmancerFile = (
+  fileName: string | 'untitled',
   {
     entities,
     entityCounter,
@@ -38,7 +39,7 @@ export const saveFlowmancerFile = (
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'project.flowmancer';
+  link.download = `${fileName}.flowmancer`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
